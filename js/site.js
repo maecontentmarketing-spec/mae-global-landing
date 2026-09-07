@@ -18,6 +18,19 @@ function setHref(id, hrefPrefix, value) {
   }
 }
 
+// 把某个占位框换成真正的照片（如果 admin 后台已经上传了图片网址）；
+// 没有上传过的话，就还原成原本的占位提示文字。
+function setMedia(id, url) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (url) {
+    el.innerHTML = `<img src="${url}" alt="">`;
+  } else {
+    const placeholder = el.getAttribute("data-placeholder") || "";
+    el.textContent = placeholder;
+  }
+}
+
 function render(content) {
   const c = content;
 
@@ -26,8 +39,10 @@ function render(content) {
   setText("hero-lede", c.hero.lede);
   setText("hero-intro", c.hero.intro);
   setText("hero-button", c.hero.button);
+  setMedia("hero-media", c.hero.image);
 
   // Kate 创办人
+  setMedia("kate-media", c.kate.image);
   setText("kate-quote", c.kate.quote);
   setText("kate-p1", c.kate.p1);
   setText("kate-p2", c.kate.p2);
@@ -66,16 +81,26 @@ function render(content) {
   setText("brand-p1", c.brand.p1);
   setText("brand-p2", c.brand.p2);
   setText("brand-p3", c.brand.p3);
+  setMedia("brand-logo-media", c.brand.logo_image);
+  setMedia("brand-product-media", c.brand.product_image);
+  setMedia("brand-cert-media", c.brand.cert_image);
 
   // Milestones
   setText("milestones-title", c.milestones.title);
   setText("milestones-subtitle", c.milestones.subtitle);
   const mg = document.getElementById("milestones-grid");
-  mg.innerHTML = c.milestones.captions.map((cap, i) => `
+  const milestoneImages = c.milestones.images || [];
+  mg.innerHTML = c.milestones.captions.map((cap, i) => {
+    const img = milestoneImages[i];
+    const media = img
+      ? `<div class="media-slot wide"><img src="${img}" alt=""></div>`
+      : `<div class="media-slot wide">[ Milestone 照片 ${i + 1} ]</div>`;
+    return `
     <figure class="gallery-item">
-      <div class="media-slot wide">[ Milestone 照片 ${i + 1} ]</div>
+      ${media}
       <figcaption>${cap}</figcaption>
-    </figure>`).join("");
+    </figure>`;
+  }).join("");
 
   // Event
   setText("event-title", c.event.title);
@@ -89,12 +114,17 @@ function render(content) {
   setText("results-title", c.results.title);
   setText("results-warning", c.results.warning);
   const rg = document.getElementById("results-grid");
-  rg.innerHTML = c.results.items.map(r => `
+  rg.innerHTML = c.results.items.map(r => {
+    const photo = r.image
+      ? `<div class="review-photo"><img src="${r.image}" alt=""></div>`
+      : `<div class="review-photo">🖼️</div>`;
+    return `
     <div class="review-card card">
-      <div class="review-photo">🖼️</div>
+      ${photo}
       <blockquote>"${r.quote}"</blockquote>
       <div class="who">${r.who} <span style="font-weight:400;color:var(--muted);">（照片经本人同意后使用）</span></div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
   // Audience fit + FAQ
   const good = document.getElementById("faq-good");
