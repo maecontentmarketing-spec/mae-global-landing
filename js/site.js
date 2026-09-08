@@ -7,19 +7,21 @@
 //    方便之后招商 Dashboard 那边统计每个代理带来了几个人（COT Connector 排行榜用）
 // ============================================================
 
-// 抓网址上的 ?ref=会员编号（例如 mae-global-landing.netlify.app/?ref=MAE004134780HK）。
-// 统一转大写、去空白，并限制长度，避免奇怪的输入。抓不到就是 null（代表算 Kate 的）。
-function getAgentCodeFromUrl() {
+// 抓网址上的参数（?ref=会员编号、?utm_source=、?utm_medium=）。
+// ref 统一转大写；三个都会去空白、限制长度，避免奇怪的输入。抓不到就是 null。
+function getUrlParam(name, { upper = false, maxLen = 60 } = {}) {
   try {
-    const raw = new URLSearchParams(window.location.search).get("ref") || "";
-    const cleaned = raw.trim().toUpperCase().slice(0, 40);
-    return cleaned || null;
+    let raw = (new URLSearchParams(window.location.search).get(name) || "").trim().slice(0, maxLen);
+    if (upper) raw = raw.toUpperCase();
+    return raw || null;
   } catch (e) {
     return null;
   }
 }
 
-const AGENT_CODE = getAgentCodeFromUrl();
+const AGENT_CODE = getUrlParam("ref", { upper: true, maxLen: 40 });
+const UTM_SOURCE = getUrlParam("utm_source");
+const UTM_MEDIUM = getUrlParam("utm_medium");
 
 function setText(id, value) {
   const el = document.getElementById(id);
@@ -45,6 +47,77 @@ function setMedia(id, url) {
     const placeholder = el.getAttribute("data-placeholder") || "";
     el.textContent = placeholder;
   }
+}
+
+// 倒数计时：从 event.sessions 这个日期时间清单里，挑「还没开始、离现在最近」的一场，
+// 每 30 秒更新一次「还剩 X 天 X 小时 X 分钟」。全部当作马来西亚/新加坡（GMT+8）时间处理。
+let countdownTimer = null;
+function renderCountdown(sessions) {
+  const el = document.getElementById("event-countdown");
+  if (!el) return;
+
+  const upcoming = (sessions || [])
+    .filter(Boolean)
+    .map(s => new Date(s.length === 16 ? s + ":00+08:00" : s))
+    .filter(d => !isNaN(d.getTime()) && d.getTime() > Date.now())
+    .sort((a, b) => a - b);
+
+  clearInterval(countdownTimer);
+
+  if (!upcoming.length) {
+    el.hidden = true;
+    return;
+  }
+
+  const target = upcoming[0];
+  el.hidden = false;
+
+  function tick() {
+    const diff = target.getTime() - Date.now();
+    if (diff <= 0) {
+      el.textContent = "⏰ 分享会即将开始！";
+      clearInterval(countdownTimer);
+      return;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    el.textContent = `⏰ 距离最近一场分享会还有 ${d} 天 ${h} 小时 ${m} 分钟`;
+  }
+  tick();
+  countdownTimer = setInterval(tick, 30000);
+}
+
+// 「已有 XX 人报名」计数器：只有 register.show_counter 打开才会显示。
+async function renderRegisterCounter(show) {
+  const el = document.getElementById("register-counter");
+  if (!el) return;
+  if (!show) {
+    el.hidden = true;
+    return;
+  }
+  try {
+    const { data, error } = await supabaseClient.from("registration_total_count").select("total").single();
+    if (error) throw error;
+    el.hidden = false;
+    el.textContent = `🔥 已有 ${data.total} 人报名`;
+  } catch (err) {
+    el.hidden = true;
+  }
+}
+
+// 把板块按照后台设定的顺序排好、该隐藏的隐藏。找不到设定就维持网页原本的顺序。
+function applyLayout(layout) {
+  const main = document.getElementById("page-sections");
+  if (!main) return;
+  const order = (layout && layout.order && layout.order.length) ? layout.order : DEFAULT_CONTENT.layout.order;
+  const hidden = (layout && layout.hidden) || [];
+  order.forEach(key => {
+    const el = main.querySelector(`[data-section-key="${key}"]`);
+    if (!el) return;
+    main.appendChild(el);
+    el.hidden = hidden.includes(key);
+  });
 }
 
 function render(content) {
@@ -125,6 +198,7 @@ function render(content) {
   setText("event-time", c.event.time);
   setText("event-place", c.event.place);
   setText("event-timezone", c.event.timezone);
+  renderCountdown(c.event.sessions);
 
   // Results / reviews
   setText("results-title", c.results.title);
@@ -134,11 +208,15 @@ function render(content) {
     const photo = r.image
       ? `<div class="review-photo"><img src="${r.image}" alt=""></div>`
       : `<div class="review-photo">🖼️</div>`;
+    const igLink = r.ig_link
+      ? `<a class="ig-link" href="${r.ig_link}" target="_blank" rel="noopener">查看 IG 原帖 →</a>`
+      : "";
     return `
     <div class="review-card card">
       ${photo}
       <blockquote>"${r.quote}"</blockquote>
       <div class="who">${r.who} <span style="font-weight:400;color:var(--muted);">（照片经本人同意后使用）</span></div>
+      ${igLink}
     </div>`;
   }).join("");
 
@@ -158,6 +236,7 @@ function render(content) {
   setText("register-p1", c.register.p1);
   setText("register-p2", c.register.p2);
   setText("register-button", c.register.button);
+  renderRegisterCounter(c.register.show_counter);
 
   // Closing
   setText("closing-line1", c.closing.line1);
@@ -168,6 +247,9 @@ function render(content) {
   setHref("footer-email", "mailto:", c.footer.email);
   setHref("footer-phone", "tel:", c.footer.phone);
   setText("footer-address", c.footer.address);
+
+  // 板块排版（顺序 + 隐藏），放最后确保这时候所有板块都已经存在
+  applyLayout(c.layout);
 }
 
 async function loadContent() {
@@ -194,11 +276,13 @@ async function loadContent() {
 function initForm() {
   const form = document.getElementById("register-form");
   const okMsg = document.getElementById("form-msg-ok");
+  const dupMsg = document.getElementById("form-msg-dup");
   const errMsg = document.getElementById("form-msg-err");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     okMsg.classList.remove("show");
+    dupMsg.classList.remove("show");
     errMsg.classList.remove("show");
 
     const btn = form.querySelector("button[type=submit]");
@@ -208,18 +292,29 @@ function initForm() {
 
     const payload = {
       name: form.name.value.trim(),
-      email: form.email.value.trim(),
+      email: form.email.value.trim().toLowerCase(),
       phone: form.phone.value.trim(),
       city: form.city.value.trim(),
       message: form.message.value.trim(),
-      agent_code: AGENT_CODE
+      agent_code: AGENT_CODE,
+      utm_source: UTM_SOURCE,
+      utm_medium: UTM_MEDIUM
     };
 
     try {
       const { error } = await supabaseClient.from("registrations").insert([payload]);
-      if (error) throw error;
-      okMsg.classList.add("show");
-      form.reset();
+      if (error) {
+        // 23505 = 违反唯一值限制，代表这个邮箱已经报名过了（不是真的出错）
+        if (error.code === "23505") {
+          dupMsg.classList.add("show");
+          form.reset();
+        } else {
+          throw error;
+        }
+      } else {
+        okMsg.classList.add("show");
+        form.reset();
+      }
     } catch (err) {
       console.error(err);
       errMsg.classList.add("show");
