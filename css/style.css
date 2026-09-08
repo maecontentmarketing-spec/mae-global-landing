@@ -178,7 +178,9 @@
     background:var(--purple-light);border-radius:16px;aspect-ratio:16/9;
     display:flex;align-items:center;justify-content:center;color:#a98fce;
     margin-bottom:16px;font-size:28px;
+    overflow:hidden;
   }
+  .review-photo img{width:100%;height:100%;object-fit:cover;}
   .review-card blockquote{margin:0 0 14px;font-size:15px;color:var(--ink-soft);font-style:italic;}
   .review-card .who{border-top:1px solid var(--card-border);padding-top:12px;font-weight:700;font-size:14px;}
 
@@ -253,3 +255,16 @@
 .leads-table{width:100%;border-collapse:collapse;font-size:13.5px;}
 .leads-table th,.leads-table td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--card-border);}
 .leads-table th{color:var(--muted);font-weight:600;}
+
+/* ---------- Admin image upload ---------- */
+.img-field{border:1px dashed var(--card-border);border-radius:12px;padding:12px;}
+.img-upload-row{display:flex;gap:12px;align-items:center;margin-top:8px;}
+.img-preview{
+  width:76px;height:76px;border-radius:10px;background:var(--purple-light);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;
+  color:#a98fce;font-size:11.5px;text-align:center;
+}
+.img-preview img{width:100%;height:100%;object-fit:cover;}
+.img-upload-controls{flex:1;min-width:0;}
+.img-upload-controls input[type="file"]{font-size:13px;max-width:100%;}
+.img-upload-status{font-size:12.5px;color:var(--muted);margin-top:6px;}
