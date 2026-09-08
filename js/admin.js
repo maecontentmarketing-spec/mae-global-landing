@@ -34,8 +34,66 @@ function textInput(id, label, type, value) {
   }</div>`;
 }
 
+// 图片上传栏位：预览框 + 选档案按钮 + 一个藏起来的 input 存网址
+// （藏起来的 input 用跟文字栏位一样的 data-field，保存的时候会一起被读到）
+function imageField(fieldPath, label, url) {
+  const safeUrl = (url || "").toString();
+  const previewHtml = safeUrl ? `<img src="${safeUrl}" alt="">` : `<span>尚未上传</span>`;
+  return `
+    <div class="admin-field img-field">
+      <label>${label}</label>
+      <div class="img-upload-row">
+        <div class="img-preview">${previewHtml}</div>
+        <div class="img-upload-controls">
+          <input type="file" accept="image/*" class="img-file-input">
+          <div class="img-upload-status"></div>
+        </div>
+      </div>
+      <input type="hidden" data-field="${fieldPath}" value="${safeUrl.replace(/"/g, "&quot;")}">
+    </div>`;
+}
+
+async function handleImageUpload(inputEl) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  const wrapper = inputEl.closest(".img-field");
+  const statusEl = wrapper.querySelector(".img-upload-status");
+  const previewEl = wrapper.querySelector(".img-preview");
+  const hiddenInput = wrapper.querySelector('input[type="hidden"]');
+
+  statusEl.textContent = "上传中...";
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `uploads/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error: uploadError } = await supabaseClient.storage.from("site-images").upload(path, file, { upsert: true });
+  if (uploadError) {
+    statusEl.textContent = "上传失败：" + uploadError.message + "（常见原因：Supabase 里还没建立 site-images 这个 Storage bucket）";
+    return;
+  }
+
+  const { data } = supabaseClient.storage.from("site-images").getPublicUrl(path);
+  const publicUrl = data.publicUrl;
+
+  hiddenInput.value = publicUrl;
+  previewEl.innerHTML = `<img src="${publicUrl}" alt="">`;
+  statusEl.textContent = "上传成功！记得点下面的「保存」按钮，网站才会真的更新。";
+}
+
 function renderSection(key, data) {
   let inner = "";
+
+  if (key === "hero") {
+    inner += imageField("image", "Hero 背景图", data.hero.image);
+  }
+  if (key === "kate") {
+    inner += imageField("image", "Kate 创办人照片", data.kate.image);
+  }
+  if (key === "brand") {
+    inner += imageField("logo_image", "MAE Logo", data.brand.logo_image);
+    inner += imageField("product_image", "产品图", data.brand.product_image);
+    inner += imageField("cert_image", "纪录认证证书照片", data.brand.cert_image);
+  }
 
   if (TEXT_FIELDS[key]) {
     inner += TEXT_FIELDS[key].map(([f, label, type]) => textInput(f, label, type, data[key][f])).join("");
@@ -51,13 +109,16 @@ function renderSection(key, data) {
   }
 
   if (key === "milestones") {
-    inner += `<div class="admin-field"><label>照片说明（每行一条，共 8 条）</label>
+    const images = data.milestones.images || [];
+    inner += data.milestones.captions.map((cap, i) => imageField(`_milestone_img.${i}`, `照片 ${i + 1}`, images[i])).join("");
+    inner += `<div class="admin-field"><label>照片说明（每行一条，共 8 条，顺序对应上面的照片）</label>
       <textarea data-field="_captions" rows="8">${data.milestones.captions.join("\n")}</textarea></div>`;
   }
 
   if (key === "results") {
     inner += data.results.items.map((r, i) => `
       <div class="admin-field" style="border-top:1px solid var(--card-border);padding-top:12px;">
+        ${imageField(`_items.${i}.image`, "照片", r.image)}
         <label>姓名/身份</label><input type="text" data-field="_items.${i}.who" value="${r.who.replace(/"/g, "&quot;")}">
         <label style="margin-top:10px;">见证内容</label><textarea data-field="_items.${i}.quote">${r.quote}</textarea>
       </div>`).join("");
@@ -89,6 +150,10 @@ function renderAllSections() {
 
   document.querySelectorAll("[data-save]").forEach(btn => {
     btn.addEventListener("click", () => saveSection(btn.getAttribute("data-save")));
+  });
+
+  document.querySelectorAll(".img-file-input").forEach(input => {
+    input.addEventListener("change", () => handleImageUpload(input));
   });
 }
 
@@ -124,6 +189,10 @@ async function saveSection(key) {
       updated[idx][field] = val;
     } else if (path === "_captions") {
       updated.captions = val.split("\n");
+    } else if (path.startsWith("_milestone_img.")) {
+      const idx = path.split(".")[1];
+      if (!updated.images) updated.images = [];
+      updated.images[idx] = val;
     } else if (path.startsWith("_items.")) {
       const [, idx, field] = path.split(".");
       updated.items[idx][field] = val;
