@@ -19,8 +19,11 @@
   </div>
 </header>
 
+<!-- ============ 以下板块可以在后台「网站排版」拖拽调整顺序 / 隐藏 ============ -->
+<main id="page-sections">
+
 <!-- ============ HERO ============ -->
-<section class="hero">
+<section class="hero" data-section-key="hero">
   <div class="wrap">
     <h1 id="hero-title"></h1>
     <p class="lede" id="hero-lede"></p>
@@ -31,7 +34,7 @@
 </section>
 
 <!-- ============ FOUNDER STORY ============ -->
-<section class="founder">
+<section class="founder" data-section-key="kate">
   <div class="wrap">
     <div class="founder-grid">
       <div class="media-slot tall" id="kate-media" data-placeholder="[ Kate 创办人照片 ]">[ Kate 创办人照片 ]</div>
@@ -50,7 +53,7 @@
 </section>
 
 <!-- ============ OPPORTUNITY REFRAME ============ -->
-<section style="padding-top:0;">
+<section style="padding-top:0;" data-section-key="opportunity">
   <div class="narrow" style="text-align:center;">
     <p style="font-size:17px;color:var(--ink-soft);" id="opp-p1"></p>
     <p style="font-size:17px;color:var(--ink-soft);" id="opp-p2"></p>
@@ -59,7 +62,7 @@
 </section>
 
 <!-- ============ GROW SYSTEM ============ -->
-<section>
+<section data-section-key="system">
   <div class="wrap">
     <div class="grow-header">
       <h2 class="section-title" id="system-title"></h2>
@@ -114,14 +117,14 @@
 </section>
 
 <!-- ============ HIGHLIGHTS ============ -->
-<section style="padding-top:0;">
+<section style="padding-top:0;" data-section-key="highlights">
   <div class="wrap">
     <div class="highlight-grid" id="highlights-grid"></div>
   </div>
 </section>
 
 <!-- ============ BRAND CREDIBILITY ============ -->
-<section class="brand-band">
+<section class="brand-band" data-section-key="brand">
   <div class="wrap">
     <h2 class="section-title">MAE 品牌背书</h2>
     <div class="stat-grid">
@@ -141,7 +144,7 @@
 </section>
 
 <!-- ============ MILESTONE GALLERY ============ -->
-<section>
+<section data-section-key="milestones">
   <div class="wrap">
     <h2 class="section-title" id="milestones-title"></h2>
     <p class="section-sub" id="milestones-subtitle"></p>
@@ -150,11 +153,12 @@
 </section>
 
 <!-- ============ EVENT DETAILS ============ -->
-<section>
+<section data-section-key="event">
   <div class="wrap">
     <div class="event-card">
       <h2 class="section-title" id="event-title"></h2>
       <p class="section-sub" id="event-subtitle"></p>
+      <div class="event-countdown" id="event-countdown" hidden></div>
       <div class="event-grid">
         <div class="event-item"><div class="ic">📅</div><div class="label">日期</div><div class="val" id="event-date"></div></div>
         <div class="event-item"><div class="ic">🕐</div><div class="label">时间</div><div class="val" id="event-time"></div></div>
@@ -166,7 +170,7 @@
 </section>
 
 <!-- ============ REVIEWS ============ -->
-<section>
+<section data-section-key="results">
   <div class="wrap">
     <h2 class="section-title" id="results-title"></h2>
     <div class="review-warning" id="results-warning"></div>
@@ -175,7 +179,7 @@
 </section>
 
 <!-- ============ AUDIENCE FIT + FAQ ============ -->
-<section>
+<section data-section-key="faq">
   <div class="wrap">
     <h2 class="section-title">谁适合参与</h2>
     <p class="section-sub">这场分享会，特别适合：</p>
@@ -196,7 +200,7 @@
 </section>
 
 <!-- ============ CONTACT / REGISTER ============ -->
-<section id="register">
+<section id="register" data-section-key="register">
   <div class="narrow" style="text-align:center;margin-bottom:32px;">
     <p style="font-size:19px;font-weight:700;" id="register-p1"></p>
     <p style="color:var(--ink-soft);" id="register-p2"></p>
@@ -204,6 +208,7 @@
   <div class="wrap">
     <div class="card">
       <div class="form-msg ok" id="form-msg-ok">谢谢报名！我们收到你的资料了，活动前会再联络你。</div>
+      <div class="form-msg info" id="form-msg-dup">这个邮箱已经报名过了，我们已经收到你的资料，很快会联络你！</div>
       <div class="form-msg err" id="form-msg-err">提交失败，请稍后再试一次，或直接 WhatsApp 联络我们。</div>
       <form id="register-form">
         <div class="form-field">
@@ -226,6 +231,7 @@
           <label>想了解的内容 / 留言</label>
           <textarea name="message" placeholder="例如：方便参加分享会的时间、想了解的产品或合作方案"></textarea>
         </div>
+        <div class="register-counter" id="register-counter" hidden></div>
         <button type="submit" class="btn btn-block" id="register-button"></button>
       </form>
     </div>
@@ -233,12 +239,15 @@
 </section>
 
 <!-- ============ CLOSING ============ -->
-<section class="closing">
+<section class="closing" data-section-key="closing">
   <div class="narrow">
     <p id="closing-line1"></p>
     <p class="soft" id="closing-line2"></p>
   </div>
 </section>
+
+</main>
+<!-- ============ 以上是可排版板块的范围 ============ -->
 
 <!-- ============ FOOTER ============ -->
 <footer>

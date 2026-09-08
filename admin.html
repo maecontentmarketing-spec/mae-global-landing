@@ -42,20 +42,59 @@
     <div class="who">已登入：<span id="who-email"></span></div>
     <button class="link-btn" id="logout-btn">登出</button>
   </div>
-  <div id="sections"></div>
 
-  <div class="admin-section">
-    <h3>报名名单 <button class="link-btn" id="refresh-leads">刷新</button></h3>
-    <div style="overflow-x:auto;">
-      <table class="leads-table" id="leads-table">
-        <thead><tr><th>时间</th><th>姓名</th><th>邮箱</th><th>电话</th><th>城市</th><th>留言</th></tr></thead>
-        <tbody id="leads-body"></tbody>
-      </table>
+  <div class="admin-tabs">
+    <button class="tab-btn active" data-tab="tab-content">内容 & 排版</button>
+    <button class="tab-btn" data-tab="tab-leads">报名数据</button>
+    <button class="tab-btn" data-tab="tab-templates">Email 模板</button>
+  </div>
+
+  <!-- Tab 1：内容/排版编辑（现有各板块 + 网站排版拖拽卡片，都在 admin.js 里动态生成） -->
+  <div class="tab-panel active" id="tab-content">
+    <div id="sections"></div>
+  </div>
+
+  <!-- Tab 2：报名数据 & Overview -->
+  <div class="tab-panel" id="tab-leads">
+    <div class="admin-section card">
+      <h3>Overview 总览</h3>
+      <div class="overview-grid" id="leads-overview"></div>
+    </div>
+
+    <div class="admin-section card">
+      <h3>报名名单
+        <span style="float:right;">
+          <button class="link-btn" id="export-csv">导出 CSV</button>
+          <button class="link-btn" id="refresh-leads">刷新</button>
+        </span>
+      </h3>
+      <div style="overflow-x:auto;">
+        <table class="leads-table" id="leads-table">
+          <thead><tr><th>时间</th><th>姓名</th><th>邮箱</th><th>电话</th><th>城市</th><th>代理代码</th><th>来源</th><th>Email</th></tr></thead>
+          <tbody id="leads-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3：Email 模板管理 -->
+  <div class="tab-panel" id="tab-templates">
+    <div class="admin-section card">
+      <h3>Email 模板
+        <span style="float:right;">
+          <button class="link-btn" id="add-template-btn">+ 新增模板</button>
+          <button class="btn save-btn" id="save-templates-btn">保存</button>
+        </span>
+      </h3>
+      <p class="hint">这里管理的模板，会出现在「报名数据」名单里每一行的 Email 下拉选单中。{{name}} 会自动换成该笔报名资料的姓名。</p>
+      <div id="templates-list"></div>
+      <div class="form-msg ok" id="templates-save-msg" style="margin-top:10px;">已保存。</div>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/content.js"></script>
 <script src="js/admin.js"></script>
