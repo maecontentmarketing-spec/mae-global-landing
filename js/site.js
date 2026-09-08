@@ -3,7 +3,23 @@
 // 1. 先用 content.js 里的预设文案画面
 // 2. 去 Supabase 的 page_content 表拿 admin 后台存的内容，盖上去
 // 3. 处理报名表单，写进 Supabase 的 registrations 表
+// 4. 记录网址上带的代理专属代码（?ref=会员编号），一起存进报名资料，
+//    方便之后招商 Dashboard 那边统计每个代理带来了几个人（COT Connector 排行榜用）
 // ============================================================
+
+// 抓网址上的 ?ref=会员编号（例如 mae-global-landing.netlify.app/?ref=MAE004134780HK）。
+// 统一转大写、去空白，并限制长度，避免奇怪的输入。抓不到就是 null（代表算 Kate 的）。
+function getAgentCodeFromUrl() {
+  try {
+    const raw = new URLSearchParams(window.location.search).get("ref") || "";
+    const cleaned = raw.trim().toUpperCase().slice(0, 40);
+    return cleaned || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+const AGENT_CODE = getAgentCodeFromUrl();
 
 function setText(id, value) {
   const el = document.getElementById(id);
@@ -195,7 +211,8 @@ function initForm() {
       email: form.email.value.trim(),
       phone: form.phone.value.trim(),
       city: form.city.value.trim(),
-      message: form.message.value.trim()
+      message: form.message.value.trim(),
+      agent_code: AGENT_CODE
     };
 
     try {
