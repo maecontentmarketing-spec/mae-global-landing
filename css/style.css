@@ -66,16 +66,66 @@
   .btn-block{display:block;width:100%;text-align:center;padding:16px 20px;font-size:16px;}
 
   /* ---------- Hero ---------- */
+  /* 默认（还没上传照片）：跟原本一样是淡紫色渐层背景、深色文字。
+     后台一旦上传了 Hero 图，site.js 会给 .hero 加上 .has-photo，
+     这时照片变成满版背景、文字盖在照片上面（配一层深色渐层遮罩保证可读性）。 */
   .hero{
+    position:relative;
+    overflow:hidden;
     background:linear-gradient(180deg,var(--purple-light) 0%, var(--cream) 65%);
     padding:64px 0 48px;
   }
+  .hero-media-bg{
+    display:none;
+    position:absolute;inset:0;
+    background:var(--purple-light);
+  }
+  .hero-media-bg img{
+    position:absolute;inset:0;
+    width:100%;height:100%;object-fit:cover;
+  }
+  .hero-overlay{display:none;}
+  .hero-content{position:relative;z-index:2;text-align:center;}
   .hero h1{
     font-size:38px;line-height:1.35;font-weight:800;margin:0 0 20px;
   }
   .hero .lede{font-size:19px;color:var(--ink-soft);margin:0 0 20px;}
   .hero .intro{font-size:16px;color:var(--ink-soft);margin:0 0 32px;}
   .hero .intro b{color:var(--ink);}
+
+  /* 有照片的状态：手机版尽量宽松、不压迫——高度跟着内容走（不强制拉很高），
+     文字之间留多一点呼吸空间，遮罩用比较均匀柔和的深浅，而不是又高又暗一大片。
+     桌面版（≥720px）才用比较大、比较有气势的高度和字级。 */
+  .hero.has-photo{
+    display:flex;align-items:center;
+    padding:56px 0 64px;
+    background:var(--ink);
+  }
+  .hero.has-photo .hero-media-bg{
+    display:block;
+    background:var(--ink);
+    color:transparent;
+    font-size:0;
+  }
+  .hero.has-photo .hero-overlay{
+    display:block;
+    position:absolute;inset:0;
+    background:linear-gradient(180deg, rgba(28,23,48,0.5) 0%, rgba(28,23,48,0.62) 55%, rgba(28,23,48,0.72) 100%);
+  }
+  .hero.has-photo h1{
+    color:#fff;
+    font-size:30px;line-height:1.5;letter-spacing:0.2px;
+  }
+  .hero.has-photo .lede{color:rgba(255,255,255,0.92);font-size:16.5px;line-height:1.6;margin:0 0 28px;}
+  .hero.has-photo .intro{color:rgba(255,255,255,0.8);margin:0 0 36px;}
+  .hero.has-photo .intro b{color:#fff;}
+  .hero.has-photo .hero-content{max-width:720px;}
+  .hero.has-photo .btn-block{padding:15px 20px;}
+  @media(min-width:720px){
+    .hero.has-photo{min-height:680px;padding:100px 0;}
+    .hero.has-photo h1{font-size:46px;line-height:1.35;}
+    .hero.has-photo .lede{font-size:19px;}
+  }
   .media-slot{
     background:var(--purple-light);
     border:1px dashed #d9bdf2;
@@ -271,6 +321,31 @@
   padding:10px 12px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff;
 }
 .admin-field textarea{min-height:70px;resize:vertical;}
+
+/* 富文本栏位：工具栏（加粗/底线/斜体/字号/颜色/清除格式）+ 可编辑文字框 */
+.richtext-toolbar{
+  display:flex;align-items:center;flex-wrap:wrap;gap:6px;
+  margin-bottom:6px;
+}
+.rt-btn{
+  border:1px solid var(--card-border);background:#fff;border-radius:8px;
+  min-width:30px;height:30px;padding:0 8px;
+  font-size:13px;color:var(--ink-soft);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:border-color .15s ease,background .15s ease;
+}
+.rt-btn:hover{border-color:var(--purple);color:var(--purple);}
+.rt-btn.rt-color{width:26px;height:26px;min-width:26px;padding:0;border-radius:999px;border:1.5px solid var(--card-border);}
+.rt-btn.rt-color[data-color="#ffffff"]{border-color:#d9d3e6;}
+.rt-btn.rt-clear{font-size:12px;color:var(--muted);}
+.rt-sep{width:1px;height:20px;background:var(--card-border);margin:0 2px;}
+.richtext-box{
+  width:100%;min-height:70px;border:1px solid var(--card-border);border-radius:10px;
+  padding:10px 12px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff;
+  line-height:1.6;
+}
+.richtext-box:focus{outline:2px solid var(--purple-light);border-color:var(--purple);}
+.rt-hint{margin:6px 0 0;font-size:12px;color:var(--muted);}
 .admin-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
 .admin-topbar .who{font-size:13.5px;color:var(--muted);}
 .link-btn{background:none;border:none;color:var(--purple);font-weight:700;cursor:pointer;font-size:13.5px;padding:0;}
