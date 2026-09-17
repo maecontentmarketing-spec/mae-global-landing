@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的自我介绍 - MAE GLOBAL</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="header-inner">
+    <div class="logo-group">
+      <div class="logo-badge">Logo</div>
+      <div class="logo-text">MAE <span>GLOBAL</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap">
+    <div class="narrow" style="text-align:center;margin:32px auto 24px;">
+      <p style="font-size:19px;font-weight:700;">我的自我介绍</p>
+      <p style="color:var(--ink-soft);">填好照片、名字、一句话自我介绍后，别人透过你的专属连接打开报名页面时，就会看到「XXX 邀请你认识 MAE」的卡片。你的专属代码不会公开显示，只有你自己看得到。</p>
+    </div>
+
+    <div class="card" style="max-width:520px;margin:0 auto;">
+
+      <p class="hint" id="agent-profile-blocked" style="display:none;">
+        连接不完整——请使用你自己的专属连接打开这个页面（网址后面要带有 ?ref=你的专属代码，跟你平时分享的报名连接一样，只是把 index.html 换成 agent-profile.html）。
+      </p>
+
+      <div id="agent-profile-form-wrap">
+        <p class="hint">你的专属代码：<strong id="agent-profile-code"></strong>（只用来对应资料，不会公开显示在卡片上）</p>
+
+        <div class="admin-field img-field">
+          <label>我的照片</label>
+          <div class="img-upload-row">
+            <div class="img-preview" id="agent-photo-preview"><span>尚未上传</span></div>
+            <div class="img-upload-controls">
+              <input type="file" accept="image/*" id="agent-photo-input">
+              <div class="img-upload-status" id="agent-photo-status"></div>
+            </div>
+          </div>
+          <input type="hidden" id="agent-photo-url" value="">
+        </div>
+
+        <div class="form-field">
+          <label>名字（会显示在邀请卡片上）</label>
+          <input type="text" id="agent-name-input" maxlength="40">
+        </div>
+
+        <div class="form-field">
+          <label>一句话自我介绍</label>
+          <textarea id="agent-intro-input" maxlength="80" placeholder="例如：欢迎认识我，一起了解 MAE 事业分享会！"></textarea>
+        </div>
+
+        <div class="form-msg ok" id="agent-profile-msg-ok">保存成功！你的邀请卡片已经更新了。</div>
+        <div class="form-msg err" id="agent-profile-msg-err">保存失败，请稍后再试一次。</div>
+
+        <button type="button" class="btn btn-block" id="agent-profile-save-btn">保存</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/agent-profile.js"></script>
+</body>
+</html>
