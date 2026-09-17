@@ -125,7 +125,7 @@ const DEFAULT_CONTENT = {
     hidden: []
   },
   // Email 模板：报名名单那边点「Email」按钮时可以挑一个模板，内容会自动带进 Gmail 编辑窗口。
-  // {{name}} 会自动换成该笔报名资料的姓名。
+  // {{name}} 会自动换成该笔报名资料的姓名，{{agent_name}} 会自动换成带来这笔报名的代理名字（裸报名会留空）。
   email_templates: {
     items: [
       { label: "报名后感谢信", subject: "谢谢你报名 MAE 事业分享会！", body: "{{name}} 你好，\n\n谢谢你报名参加 MAE 事业分享会，我们已经收到你的资料，活动前会再提醒你一次。\n\n有任何问题都欢迎直接回复这封邮件。" },

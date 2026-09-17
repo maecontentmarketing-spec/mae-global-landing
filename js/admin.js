@@ -18,6 +18,7 @@ const TEXT_FIELDS = {
 
 let lastLeadsRows = []; // 上次读到的报名名单（给 Email 按钮 / CSV 导出用）
 let agentLinksList = []; // 上次读到的「专属连接工具」生成过的连接（给报名名单/Overview 对照名字用）
+let agentProfilesMap = {}; // 代理自己在 agent-profile.html 填过的名字（code -> name），给 Email 模板 {{agent_name}} 用
 
 // ============================================================
 // 专属连接工具：现成 UTM 连接 + 给非 EL002 的人生成专属连接（含查名单连接）
@@ -90,6 +91,29 @@ function displayAgentCode(code) {
   if (!code) return "Kate";
   const labelMap = agentLinkLabelMap();
   return labelMap[code] ? `${labelMap[code]}（${code}）` : code;
+}
+
+// 读取代理自己在 agent-profile.html 填过的名字（跟首页邀请卡片用的是同一份资料），
+// 给 Email 模板里的 {{agent_name}} 用。
+async function loadAgentProfiles() {
+  const { data, error } = await supabaseClient.from("agent_profiles").select("code, name");
+  if (error) {
+    console.warn("读取代理自我介绍名字失败：", error.message);
+    agentProfilesMap = {};
+    return;
+  }
+  agentProfilesMap = {};
+  (data || []).forEach(p => { if (p.name) agentProfilesMap[p.code] = p.name; });
+}
+
+// {{agent_name}} 要换成的名字：优先用代理自己填的名字（agent_profiles），
+// 没填过就退回「专属连接工具」的标签，都没有就用代码本身；完全没有代理代码（裸报名）就是空白。
+function agentNameForCode(code) {
+  if (!code) return "";
+  if (agentProfilesMap[code]) return agentProfilesMap[code];
+  const label = agentLinkLabelMap()[code];
+  if (label) return label;
+  return code;
 }
 
 function renderAgentLinksList() {
@@ -618,8 +642,9 @@ function openGmailForLead(idx) {
   const tpl = templates[Number(select ? select.value : 0)] || templates[0];
   if (!tpl) return;
   const name = row.name || "";
-  const subject = (tpl.subject || "").replace(/\{\{name\}\}/g, name);
-  const body = (tpl.body || "").replace(/\{\{name\}\}/g, name);
+  const agentName = agentNameForCode(row.agent_code);
+  const subject = (tpl.subject || "").replace(/\{\{name\}\}/g, name).replace(/\{\{agent_name\}\}/g, agentName);
+  const body = (tpl.body || "").replace(/\{\{name\}\}/g, name).replace(/\{\{agent_name\}\}/g, agentName);
   const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(row.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.open(url, "_blank");
 }
@@ -709,7 +734,8 @@ function exportCsv() {
 
 // ============================================================
 // Email 模板 Tab：管理报名名单那边点「Email」时可以挑选的内容模板。
-// {{name}} 之后会自动换成该笔报名资料的姓名。
+// {{name}} 会自动换成该笔报名资料的姓名，{{agent_name}} 会自动换成
+// 带来这笔报名的代理名字（没有代理归属的裸报名会自动留空）。
 // ============================================================
 function renderTemplates() {
   const container = document.getElementById("templates-list");
@@ -724,7 +750,7 @@ function renderTemplates() {
         <input type="text" class="tpl-field" data-tpl-field="label" value="${(t.label || "").replace(/"/g, "&quot;")}"></div>
       <div class="admin-field"><label>邮件标题</label>
         <input type="text" class="tpl-field" data-tpl-field="subject" value="${(t.subject || "").replace(/"/g, "&quot;")}"></div>
-      <div class="admin-field"><label>邮件内容（可以用 {{name}} 代表这笔报名资料的姓名）</label>
+      <div class="admin-field"><label>邮件内容（可以用 {{name}} 代表这笔报名资料的姓名，{{agent_name}} 代表带来这笔报名的代理名字——没有代理归属的裸报名会自动留空）</label>
         <textarea class="tpl-field" data-tpl-field="body" rows="6">${t.body || ""}</textarea></div>
     </div>`).join("") || `<p class="hint">还没有模板，点下面「+ 新增模板」加一个。</p>`;
 
@@ -791,6 +817,7 @@ function showEditor(email) {
     renderTemplates();
     renderUtmLinks();
     await loadAgentLinks(); // 要先读到标签对照表，报名名单/Overview 才能正确显示名字
+    await loadAgentProfiles(); // 读代理自己填过的名字，给 Email 模板 {{agent_name}} 用
     loadLeads();
   });
 }
