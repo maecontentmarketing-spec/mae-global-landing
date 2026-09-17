@@ -187,12 +187,154 @@ const SECTION_LABELS = {
 let currentContent = null; // 合并 Supabase 覆盖后的完整内容（跟 site.js 逻辑一致）
 
 function textInput(id, label, type, value) {
+  // 段落型栏位（textarea）改用可以加粗/底线/斜体/字号/颜色的 richTextField；
+  // 单行栏位（标题、按钮文字这些）维持原本的纯文字 input，不需要格式。
+  if (type === "textarea") return richTextField(id, label, value);
   const safe = (value || "").toString();
-  return `<div class="admin-field"><label>${label}</label>${
-    type === "textarea"
-      ? `<textarea data-field="${id}">${safe}</textarea>`
-      : `<input type="text" data-field="${id}" value="${safe.replace(/"/g, "&quot;")}">`
-  }</div>`;
+  return `<div class="admin-field"><label>${label}</label><input type="text" data-field="${id}" value="${safe.replace(/"/g, "&quot;")}"></div>`;
+}
+
+// ------------------------------------------------------------
+// 富文本栏位：加粗 / 底线 / 斜体 + 字号（小/中/大）+ 颜色（品牌紫/深灰/白）。
+// 不是完全自由的字体/颜色选择器，是刻意限制成几个固定选项——这样 Kate/Amy
+// 不管选什么组合，都不会跟网站原本的配色、字体系统冲突、跑版。
+// ------------------------------------------------------------
+const RICHTEXT_SIZE_OPTIONS = [
+  { label: "小", value: "14px" },
+  { label: "中", value: "inherit" }, // 「中」= 还原成这个栏位原本的默认字号，不是写死某个数字
+  { label: "大", value: "20px" }
+];
+const RICHTEXT_COLOR_OPTIONS = [
+  { label: "品牌紫", value: "#7c3aed" },
+  { label: "深灰", value: "#4a4560" },
+  { label: "白色（深色背景板块专用，例如满版照片 Hero）", value: "#ffffff" }
+];
+
+function richTextField(fieldPath, label, value) {
+  const safe = (value || "").toString();
+  const sizeBtns = RICHTEXT_SIZE_OPTIONS.map(s =>
+    `<button type="button" class="rt-btn rt-size" data-size="${s.value}" title="字号：${s.label}">${s.label}</button>`
+  ).join("");
+  const colorBtns = RICHTEXT_COLOR_OPTIONS.map(c =>
+    `<button type="button" class="rt-btn rt-color" data-color="${c.value}" style="background:${c.value}" title="${c.label}"></button>`
+  ).join("");
+  return `
+    <div class="admin-field richtext-field">
+      <label>${label}</label>
+      <div class="richtext-toolbar">
+        <button type="button" class="rt-btn rt-cmd" data-cmd="bold" title="加粗"><b>B</b></button>
+        <button type="button" class="rt-btn rt-cmd" data-cmd="underline" title="底线"><u>U</u></button>
+        <button type="button" class="rt-btn rt-cmd" data-cmd="italic" title="斜体"><i>I</i></button>
+        <span class="rt-sep"></span>
+        ${sizeBtns}
+        <span class="rt-sep"></span>
+        ${colorBtns}
+        <span class="rt-sep"></span>
+        <button type="button" class="rt-btn rt-clear" title="清除这段文字的格式">清除格式</button>
+      </div>
+      <div class="richtext-box" contenteditable="true" data-field="${fieldPath}" data-richtext="1">${safe}</div>
+      <p class="rt-hint">先选取文字，再点上面的按钮套用格式。</p>
+    </div>`;
+}
+
+// 先选取文字再点工具栏按钮时，把选取的内容包进一个新的 <span style="..."> 里。
+// 「字号：中」传进来的 size 是 inherit，效果是盖掉之前套过的字号、还原默认大小。
+//
+// 有一个坑：如果选取的文字「正好」就是之前套过同一种样式（字号或颜色）的整个 span，
+// 不能直接在外面再包一层新 span——CSS 的 inherit 是继承「最近的上一层」，如果新的
+// inherit span 包在旧的「字号：大」span 里面，会继承到那层「大」，而不是真正的默认大小，
+// 「中」按钮等于没用。所以这种情况改成直接修改那个既有 span 的样式，而不是再包一层。
+function applyRichStyle(box, prop, value) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !box.contains(sel.anchorNode)) {
+    alert("请先在文字框里选取要调整的文字，再点上面的按钮。");
+    return;
+  }
+  const range = sel.getRangeAt(0);
+
+  const container = range.commonAncestorContainer;
+  const parentEl = container.nodeType === 1 ? container : container.parentElement;
+  const existingSpan =
+    parentEl && parentEl !== box && parentEl.tagName === "SPAN" &&
+    parentEl.style[prop] && box.contains(parentEl) &&
+    range.toString() === parentEl.textContent
+      ? parentEl
+      : null;
+
+  if (existingSpan) {
+    existingSpan.style[prop] = value;
+    return;
+  }
+
+  const span = document.createElement("span");
+  span.style[prop] = value;
+  span.appendChild(range.extractContents());
+  range.insertNode(span);
+  // 把选取范围移到刚刚套上格式的文字，方便接着再套用别的格式（例如先选大字再加粗）
+  const newRange = document.createRange();
+  newRange.selectNodeContents(span);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+}
+
+// 只允许固定的几种标签/样式值存进 Supabase：从网页、Word、其他地方贴过来的
+// 花俏格式（字体、其他颜色、底色、超链接、图片……）都会被拆开只留纯文字，
+// 避免把奇怪的格式存进数据库、把网站排版弄乱。
+const RT_ALLOWED_TAGS = new Set(["B", "STRONG", "U", "I", "EM", "BR", "SPAN"]);
+const RT_ALLOWED_SIZES = new Set(RICHTEXT_SIZE_OPTIONS.map(s => s.value));
+const RT_ALLOWED_COLORS = new Set(RICHTEXT_COLOR_OPTIONS.map(c => c.value.toLowerCase()));
+// 浏览器有时候会把 style.color 读回来变成 rgb(...) 而不是原本设的 #xxxxxx，两种都要认得
+const RT_COLOR_RGB_MAP = { "#7c3aed": "rgb(124, 58, 237)", "#4a4560": "rgb(74, 69, 96)", "#ffffff": "rgb(255, 255, 255)" };
+Object.values(RT_COLOR_RGB_MAP).forEach(rgb => RT_ALLOWED_COLORS.add(rgb));
+
+function sanitizeRichText(html) {
+  const container = document.createElement("div");
+  container.innerHTML = html || "";
+  cleanRichNode(container);
+  return container.innerHTML;
+}
+
+function cleanRichNode(node) {
+  Array.from(node.childNodes).forEach(child => {
+    if (child.nodeType === Node.TEXT_NODE) return;
+    if (child.nodeType !== Node.ELEMENT_NODE) { node.removeChild(child); return; }
+
+    // 先把子节点清干净，才知道这个节点清完之后是不是还有内容值得保留
+    cleanRichNode(child);
+
+    const tag = child.tagName;
+    if (!RT_ALLOWED_TAGS.has(tag)) {
+      // 不在允许清单里的标签（div/p/font/a/img...）：拆开，只留里面已经清过的内容
+      while (child.firstChild) node.insertBefore(child.firstChild, child);
+      node.removeChild(child);
+      return;
+    }
+
+    if (tag === "SPAN") {
+      const color = (child.style.color || "").toLowerCase();
+      const fontSize = child.style.fontSize || "";
+      const keep = [];
+      if (color && RT_ALLOWED_COLORS.has(color)) keep.push(`color:${color}`);
+      if (fontSize && RT_ALLOWED_SIZES.has(fontSize)) keep.push(`font-size:${fontSize}`);
+      Array.from(child.attributes).forEach(a => child.removeAttribute(a.name));
+      if (keep.length) {
+        child.setAttribute("style", keep.join(";"));
+      } else {
+        // 没有留下任何允许的样式，这个 span 就没意义了，拆开只留文字
+        while (child.firstChild) node.insertBefore(child.firstChild, child);
+        node.removeChild(child);
+      }
+    } else {
+      // B/STRONG/U/I/EM/BR 不允许带任何属性
+      Array.from(child.attributes).forEach(a => child.removeAttribute(a.name));
+    }
+
+    // 清完之后如果这个标签已经空了（例如点「清除格式」之后留下的空 <b></b>），
+    // 直接拿掉，存进去的内容才干净——BR 例外，空的 <br> 本来就是它该有的样子（换行）。
+    if (child.tagName !== "BR" && !child.hasChildNodes()) {
+      node.removeChild(child);
+    }
+  });
 }
 
 // 图片上传栏位：预览框 + 选档案按钮 + 一个藏起来的 input 存网址
@@ -296,7 +438,7 @@ function renderSection(key, data) {
       <div class="admin-field" style="border-top:1px solid var(--card-border);padding-top:12px;">
         <label>Emoji</label><input type="text" data-field="_arr.${i}.emoji" value="${h.emoji}">
         <label style="margin-top:10px;">标题</label><input type="text" data-field="_arr.${i}.title" value="${h.title.replace(/"/g, "&quot;")}">
-        <label style="margin-top:10px;">描述</label><textarea data-field="_arr.${i}.desc">${h.desc}</textarea>
+        ${richTextField(`_arr.${i}.desc`, "描述", h.desc)}
       </div>`).join("");
   }
 
@@ -312,7 +454,7 @@ function renderSection(key, data) {
       <div class="admin-field" style="border-top:1px solid var(--card-border);padding-top:12px;">
         ${imageField(`_items.${i}.image`, "照片", r.image)}
         <label>姓名/身份</label><input type="text" data-field="_items.${i}.who" value="${r.who.replace(/"/g, "&quot;")}">
-        <label style="margin-top:10px;">见证内容</label><textarea data-field="_items.${i}.quote">${r.quote}</textarea>
+        ${richTextField(`_items.${i}.quote`, "见证内容", r.quote)}
         <label style="margin-top:10px;">IG 原帖网址（选填，填了见证卡片下面会出现「查看 IG 原帖」的连结）</label>
         <input type="text" placeholder="https://www.instagram.com/p/..." data-field="_items.${i}.ig_link" value="${(r.ig_link || "").replace(/"/g, "&quot;")}">
       </div>`).join("");
@@ -326,7 +468,7 @@ function renderSection(key, data) {
     inner += data.faq.items.map((f, i) => `
       <div class="admin-field" style="border-top:1px solid var(--card-border);padding-top:12px;">
         <label>问题</label><input type="text" data-field="_items.${i}.q" value="${f.q.replace(/"/g, "&quot;")}">
-        <label style="margin-top:10px;">回答</label><textarea data-field="_items.${i}.a">${f.a}</textarea>
+        ${richTextField(`_items.${i}.a`, "回答", f.a)}
       </div>`).join("");
   }
 
@@ -376,10 +518,34 @@ function renderAllSections() {
     new Sortable(layoutList, { handle: ".drag-handle", animation: 150 });
   }
 
+  // 富文本工具栏（B/U/I/字号/颜色/清除格式）按钮：点击前先用 mousedown
+  // 拦掉浏览器默认的「移开焦点」动作，不然文字框里选取的文字会在按钮
+  // 被点到之前就先被取消选取，格式会套用不到东西上。
+  const sectionsEl = document.getElementById("sections");
+  sectionsEl.addEventListener("mousedown", (e) => {
+    if (e.target.closest(".rt-btn")) e.preventDefault();
+  });
+
   // Zoom 场次「+ 加一场 / 移除」用事件委派处理，直接操作画面元素，
   // 不会重新整个板块，其他还没保存的文字栏位才不会被盖掉。
-  const sectionsEl = document.getElementById("sections");
   sectionsEl.addEventListener("click", (e) => {
+    const rtBtn = e.target.closest(".rt-btn");
+    if (rtBtn) {
+      const box = rtBtn.closest(".richtext-field").querySelector(".richtext-box");
+      if (box) {
+        box.focus();
+        if (rtBtn.dataset.cmd) {
+          document.execCommand(rtBtn.dataset.cmd);
+        } else if (rtBtn.classList.contains("rt-size")) {
+          applyRichStyle(box, "fontSize", rtBtn.dataset.size);
+        } else if (rtBtn.classList.contains("rt-color")) {
+          applyRichStyle(box, "color", rtBtn.dataset.color);
+        } else if (rtBtn.classList.contains("rt-clear")) {
+          document.execCommand("removeFormat");
+        }
+      }
+      return;
+    }
     if (e.target.id === "add-session-btn") {
       const list = e.target.previousElementSibling; // #sessions-list 紧接在按钮前面
       const idx = list.children.length;
@@ -432,7 +598,16 @@ async function saveSection(key) {
 
   card.querySelectorAll("[data-field]").forEach(el => {
     const path = el.getAttribute("data-field");
-    const val = el.getAttribute("data-bool") === "1" ? el.checked : el.value;
+    // 三种栏位类型：勾选框读 .checked；富文本框（contenteditable 的 div，没有 .value）
+    // 要读 .innerHTML 再清过一遍格式；其他一般栏位（input/textarea）读 .value。
+    let val;
+    if (el.getAttribute("data-bool") === "1") {
+      val = el.checked;
+    } else if (el.getAttribute("data-richtext") === "1") {
+      val = sanitizeRichText(el.innerHTML);
+    } else {
+      val = el.value;
+    }
 
     if (path.startsWith("_arr.")) {
       const [, idx, field] = path.split(".");

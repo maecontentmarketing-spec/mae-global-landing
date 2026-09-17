@@ -28,6 +28,16 @@ function setText(id, value) {
   if (el && value !== undefined && value !== null) el.textContent = value;
 }
 
+// 跟 setText 一样，但用 innerHTML 塞进去（后台「加粗/底线/斜体/字号/颜色」这些格式
+// 存进来的内容会带 <b>/<u>/<i>/<span style="..."> 这类标签，用 textContent 会把标签原样当文字显示出来，
+// 所以要用 innerHTML 才会正确显示格式）。
+// 这里可以放心用 innerHTML：后台 admin.js 的 sanitizeRichText() 已经把内容清过，
+// 只会剩下 b/strong/u/i/em/br/span（而且 span 只允许我们自己定义的字号/颜色），没有 script 之类的东西。
+function setRichText(id, value) {
+  const el = document.getElementById(id);
+  if (el && value !== undefined && value !== null) el.innerHTML = value;
+}
+
 function setHref(id, hrefPrefix, value) {
   const el = document.getElementById(id);
   if (el && value) {
@@ -164,31 +174,34 @@ function render(content) {
 
   // Hero
   setText("hero-title", c.hero.title);
-  setText("hero-lede", c.hero.lede);
-  setText("hero-intro", c.hero.intro);
+  setRichText("hero-lede", c.hero.lede);
+  setRichText("hero-intro", c.hero.intro);
   setText("hero-button", c.hero.button);
   setMedia("hero-media", c.hero.image);
+  // Hero 照片改成满版背景 + 文字覆盖：有上传照片才加 has-photo（白字 + 深色遮罩），
+  // 没上传维持原本淡紫色底 + 深色字，避免占位提示文字被深色遮罩盖到看不见。
+  document.querySelector(".hero")?.classList.toggle("has-photo", !!c.hero.image);
 
   // Kate 创办人
   setMedia("kate-media", c.kate.image);
   setText("kate-quote", c.kate.quote);
-  setText("kate-p1", c.kate.p1);
-  setText("kate-p2", c.kate.p2);
-  setText("kate-p3", c.kate.p3);
+  setRichText("kate-p1", c.kate.p1);
+  setRichText("kate-p2", c.kate.p2);
+  setRichText("kate-p3", c.kate.p3);
   setText("kate-signature", c.kate.signature);
-  setText("kate-p4", c.kate.p4);
-  setText("kate-p5", c.kate.p5);
-  setText("kate-p6", c.kate.p6);
+  setRichText("kate-p4", c.kate.p4);
+  setRichText("kate-p5", c.kate.p5);
+  setRichText("kate-p6", c.kate.p6);
 
   // 机会重新框定
-  setText("opp-p1", c.opportunity.p1);
-  setText("opp-p2", c.opportunity.p2);
-  setText("opp-p3", c.opportunity.p3);
+  setRichText("opp-p1", c.opportunity.p1);
+  setRichText("opp-p2", c.opportunity.p2);
+  setRichText("opp-p3", c.opportunity.p3);
 
   // GROW System
   setText("system-title", c.system.title);
-  setText("system-subtitle", c.system.subtitle);
-  setText("system-footnote", c.system.footnote);
+  setRichText("system-subtitle", c.system.subtitle);
+  setRichText("system-footnote", c.system.footnote);
 
   // Highlights
   const hg = document.getElementById("highlights-grid");
@@ -206,16 +219,16 @@ function render(content) {
   setText("brand-stat2-label", c.brand.stat2_label);
   setText("brand-stat3-value", c.brand.stat3_value);
   setText("brand-stat3-label", c.brand.stat3_label);
-  setText("brand-p1", c.brand.p1);
-  setText("brand-p2", c.brand.p2);
-  setText("brand-p3", c.brand.p3);
+  setRichText("brand-p1", c.brand.p1);
+  setRichText("brand-p2", c.brand.p2);
+  setRichText("brand-p3", c.brand.p3);
   setMedia("brand-logo-media", c.brand.logo_image);
   setMedia("brand-product-media", c.brand.product_image);
   setMedia("brand-cert-media", c.brand.cert_image);
 
   // Milestones
   setText("milestones-title", c.milestones.title);
-  setText("milestones-subtitle", c.milestones.subtitle);
+  setRichText("milestones-subtitle", c.milestones.subtitle);
   const mg = document.getElementById("milestones-grid");
   const milestoneImages = c.milestones.images || [];
   mg.innerHTML = c.milestones.captions.map((cap, i) => {
@@ -232,7 +245,7 @@ function render(content) {
 
   // Event
   setText("event-title", c.event.title);
-  setText("event-subtitle", c.event.subtitle);
+  setRichText("event-subtitle", c.event.subtitle);
   setText("event-date", c.event.date);
   setText("event-time", c.event.time);
   setText("event-place", c.event.place);
@@ -241,7 +254,7 @@ function render(content) {
 
   // Results / reviews
   setText("results-title", c.results.title);
-  setText("results-warning", c.results.warning);
+  setRichText("results-warning", c.results.warning);
   const rg = document.getElementById("results-grid");
   rg.innerHTML = c.results.items.map(r => {
     const photo = r.image
@@ -272,8 +285,8 @@ function render(content) {
     </div>`).join("");
 
   // Register
-  setText("register-p1", c.register.p1);
-  setText("register-p2", c.register.p2);
+  setRichText("register-p1", c.register.p1);
+  setRichText("register-p2", c.register.p2);
   setText("register-button", c.register.button);
   renderRegisterCounter(c.register.show_counter);
 
@@ -282,7 +295,7 @@ function render(content) {
   setText("closing-line2", c.closing.line2);
 
   // Footer
-  setText("footer-desc", c.footer.desc);
+  setRichText("footer-desc", c.footer.desc);
   setHref("footer-email", "mailto:", c.footer.email);
   setHref("footer-phone", "tel:", c.footer.phone);
   setText("footer-address", c.footer.address);
