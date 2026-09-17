@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的专属名单 - MAE GLOBAL</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="header-inner">
+    <div class="logo-group">
+      <div class="logo-badge">Logo</div>
+      <div class="logo-text">MAE <span>GLOBAL</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap">
+    <div class="narrow" style="text-align:center;margin:32px auto 24px;">
+      <p style="font-size:19px;font-weight:700;">我的专属名单</p>
+      <p style="color:var(--ink-soft);">这里只显示透过你自己的专属连接报名的人，方便你自己 follow up，不会看到别人的名单。</p>
+    </div>
+    <div class="card">
+      <p class="hint" id="my-list-status">载入中...</p>
+      <div style="overflow-x:auto;">
+        <table class="leads-table" id="my-list-table" hidden>
+          <thead><tr><th>姓名</th><th>电话 / WhatsApp</th><th>城市</th><th>报名时间</th></tr></thead>
+          <tbody id="my-list-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/my-list.js"></script>
+</body>
+</html>

@@ -57,6 +57,30 @@
   <!-- Tab 2：报名数据 & Overview -->
   <div class="tab-panel" id="tab-leads">
     <div class="admin-section card">
+      <h3>专属连接工具</h3>
+      <p class="hint">下面这些是给广告/渠道用的现成连接，直接复制去用；如果有人需要专属招商连接、但还没在 EL002 系统里，也可以在这里帮他生成一个 —— 会同时生成一条「查我的名单」连接给他，让他自己也能看到透过他的连接报名的人，不需要登入任何帐号。</p>
+
+      <div class="admin-field">
+        <label>现成渠道连接（复制去广告/官方帖子用）</label>
+        <div id="utm-links-list"></div>
+      </div>
+
+      <div class="admin-field" style="border-top:1px solid var(--card-border);padding-top:14px;">
+        <label>生成新的专属连接</label>
+        <div class="link-row">
+          <input type="text" id="agent-link-label" placeholder="填名字/标签，例如：Angi Leader">
+          <button type="button" class="btn" id="create-agent-link-btn">生成</button>
+        </div>
+        <div class="form-msg err" id="agent-link-msg" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="admin-field" style="margin-bottom:0;">
+        <label>已生成的专属连接</label>
+        <div id="agent-links-list" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+
+    <div class="admin-section card">
       <h3>Overview 总览</h3>
       <div class="overview-grid" id="leads-overview"></div>
     </div>
@@ -68,9 +92,10 @@
           <button class="link-btn" id="refresh-leads">刷新</button>
         </span>
       </h3>
+      <p class="hint">「备注」栏位可以直接打字，填完点别的地方就会自动保存，方便先标记「待分配」之类的状态。</p>
       <div style="overflow-x:auto;">
         <table class="leads-table" id="leads-table">
-          <thead><tr><th>时间</th><th>姓名</th><th>邮箱</th><th>电话</th><th>城市</th><th>代理代码</th><th>来源</th><th>Email</th></tr></thead>
+          <thead><tr><th>时间</th><th>姓名</th><th>邮箱</th><th>电话</th><th>城市</th><th>代理代码</th><th>来源</th><th>备注</th><th>Email</th></tr></thead>
           <tbody id="leads-body"></tbody>
         </table>
       </div>
