@@ -17,6 +17,139 @@ const TEXT_FIELDS = {
 };
 
 let lastLeadsRows = []; // 上次读到的报名名单（给 Email 按钮 / CSV 导出用）
+let agentLinksList = []; // 上次读到的「专属连接工具」生成过的连接（给报名名单/Overview 对照名字用）
+
+// ============================================================
+// 专属连接工具：现成 UTM 连接 + 给非 EL002 的人生成专属连接（含查名单连接）
+// ============================================================
+
+// 现成的渠道 UTM 连接（不用改代码，直接复制这些去广告/官方帖子用）。
+const UTM_LINKS = [
+  { label: "Kate 个人分享（无代理归属）", params: "utm_source=kate&utm_medium=personal" },
+  { label: "公司 IG 官方帖子", params: "utm_source=ig&utm_medium=organic" },
+  { label: "公司 IG Story", params: "utm_source=ig&utm_medium=story" },
+  { label: "Facebook 广告", params: "utm_source=fb&utm_medium=ads" },
+  { label: "Instagram 广告", params: "utm_source=ig&utm_medium=ads" }
+];
+
+function renderUtmLinks() {
+  const el = document.getElementById("utm-links-list");
+  if (!el) return;
+  const origin = location.origin;
+  el.innerHTML = UTM_LINKS.map(u => {
+    const url = `${origin}/?${u.params}`;
+    return `
+    <div class="link-row">
+      <div class="link-row-label">${u.label}</div>
+      <div class="link-row-url mono">${url}</div>
+      <button type="button" class="link-btn copy-btn" data-copy="${url}">复制</button>
+    </div>`;
+  }).join("");
+}
+
+// 一键复制：网页上所有 .copy-btn 按钮共用这一个处理（事件委派，不用一个个绑定）。
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".copy-btn");
+  if (!btn) return;
+  const text = btn.getAttribute("data-copy") || "";
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = btn.textContent;
+    btn.textContent = "已复制！";
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  } catch (err) {
+    alert("复制失败，请手动选取以下网址复制：\n\n" + text);
+  }
+});
+
+// 读取已经生成过的专属连接（agent_links 表），给「已生成的专属连接」列表 +
+// 报名名单/Overview 用（把代理代码换成看得懂的名字标签）。
+async function loadAgentLinks() {
+  const { data, error } = await supabaseClient
+    .from("agent_links")
+    .select("code, label, view_token, created_at")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.warn("读取专属连接列表失败：", error.message);
+    agentLinksList = [];
+  } else {
+    agentLinksList = data || [];
+  }
+  renderAgentLinksList();
+}
+
+function agentLinkLabelMap() {
+  const map = {};
+  agentLinksList.forEach(a => { map[a.code] = a.label; });
+  return map;
+}
+
+// 报名名单/Overview 显示代理代码时，如果这个代码是用「生成专属连接」建的，
+// 就换成「标签（代码）」比较看得懂；不是的话（比如 EL002 真正的 Member ID）就照原样显示代码。
+function displayAgentCode(code) {
+  if (!code) return "Kate";
+  const labelMap = agentLinkLabelMap();
+  return labelMap[code] ? `${labelMap[code]}（${code}）` : code;
+}
+
+function renderAgentLinksList() {
+  const el = document.getElementById("agent-links-list");
+  if (!el) return;
+  if (!agentLinksList.length) {
+    el.innerHTML = `<p class="hint">还没有生成过专属连接。</p>`;
+    return;
+  }
+  const origin = location.origin;
+  el.innerHTML = `
+    <table class="leads-table">
+      <thead><tr><th>标签 / 代码</th><th>邀请连接</th><th>查名单连接</th></tr></thead>
+      <tbody>
+        ${agentLinksList.map(a => {
+          const refUrl = `${origin}/?ref=${a.code}`;
+          const listUrl = `${origin}/my-list.html?code=${a.code}&key=${a.view_token}`;
+          return `
+          <tr>
+            <td>${a.label}<br><span class="hint" style="margin:0;">代码：${a.code}</span></td>
+            <td><div class="link-row-url mono">${refUrl}</div><button type="button" class="link-btn copy-btn" data-copy="${refUrl}">复制</button></td>
+            <td><div class="link-row-url mono">${listUrl}</div><button type="button" class="link-btn copy-btn" data-copy="${listUrl}">复制</button></td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>`;
+}
+
+// 随机产生一个不会跟真正 Member ID（格式是 MAE+数字+国家代号）搞混的代码，P 开头方便一眼认出是临时生成的。
+function generateAgentCode() {
+  const rand = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID().replace(/-/g, "")
+    : Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
+  return "P" + rand.slice(0, 6).toUpperCase();
+}
+
+async function createAgentLink() {
+  const input = document.getElementById("agent-link-label");
+  const msg = document.getElementById("agent-link-msg");
+  const label = (input.value || "").trim();
+  msg.classList.remove("show");
+
+  if (!label) {
+    msg.textContent = "请先填写名字/标签，再点生成。";
+    msg.classList.add("show");
+    return;
+  }
+
+  const code = generateAgentCode();
+  const { error } = await supabaseClient.from("agent_links").insert([{ code, label }]);
+  if (error) {
+    msg.textContent = "生成失败：" + error.message + "（常见原因：Supabase 里还没跑过 agent_links 那段 SQL）";
+    msg.classList.add("show");
+    return;
+  }
+
+  input.value = "";
+  await loadAgentLinks();
+  loadLeads(); // 重新整理一次名单，让代理代码显示换成新标签
+}
 
 const SECTION_LABELS = {
   hero: "① Hero 首屏", kate: "② Kate 创办人", opportunity: "③ 重新框定机会",
@@ -347,7 +480,7 @@ async function loadLeads() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="8">读取失败：${error.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9">读取失败：${error.message}</td></tr>`;
     return;
   }
   lastLeadsRows = data || [];
@@ -359,16 +492,41 @@ async function loadLeads() {
       <td>${r.email || ""}</td>
       <td>${r.phone || ""}</td>
       <td>${r.city || ""}</td>
-      <td>${r.agent_code || "Kate"}</td>
+      <td>${displayAgentCode(r.agent_code)}</td>
       <td>${r.utm_source ? (r.utm_source + (r.utm_medium ? " / " + r.utm_medium : "")) : ""}</td>
+      <td>${remarkInputHtml(r.id, r.remark)}</td>
       <td>${emailButtonHtml(i)}</td>
-    </tr>`).join("") || `<tr><td colspan="8">暂时没有报名资料</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="9">暂时没有报名资料</td></tr>`;
 
   document.querySelectorAll(".email-open-btn").forEach(btn => {
     btn.addEventListener("click", () => openGmailForLead(Number(btn.getAttribute("data-idx"))));
   });
 
+  document.querySelectorAll(".remark-input").forEach(input => {
+    input.addEventListener("change", () => saveRemark(input));
+  });
+
   loadOverview(lastLeadsRows);
+}
+
+// 「备注/负责人」栏位：例如裸报名（没有代理代码）的先标记「待分配」，之后确定 leader 人选再回来填名字。
+function remarkInputHtml(id, remark) {
+  const safe = (remark || "").toString().replace(/"/g, "&quot;");
+  return `<input type="text" class="remark-input" data-id="${id}" value="${safe}" placeholder="例如：待分配">`;
+}
+
+async function saveRemark(input) {
+  const id = input.getAttribute("data-id");
+  const value = input.value.trim();
+  input.disabled = true;
+  const { error } = await supabaseClient.from("registrations").update({ remark: value }).eq("id", id);
+  input.disabled = false;
+  if (error) {
+    alert("备注保存失败：" + error.message);
+    return;
+  }
+  const row = lastLeadsRows.find(r => r.id === id);
+  if (row) row.remark = value;
 }
 
 // 每一行报名资料后面的「Email」栏位：一个模板下拉选单 + 一个开 Gmail 的按钮。
@@ -417,29 +575,41 @@ function loadOverview(rows) {
 
   const agentMap = {};
   rows.forEach(r => {
-    const key = r.agent_code || "Kate（无代理代码）";
+    const key = r.agent_code ? displayAgentCode(r.agent_code) : "Kate（无代理代码）";
     agentMap[key] = (agentMap[key] || 0) + 1;
   });
   const agentRows = Object.entries(agentMap).sort((a, b) => b[1] - a[1]).map(([k, v]) => `
     <div class="trend-row"><span>${k}</span><span>${v} 人</span></div>`).join("")
     || `<div class="trend-row"><span>暂无资料</span></div>`;
 
+  // 按渠道来源统计：只看有带 utm_source 的报名（公司自己发的渠道），代理专属连接不算在这里面。
+  const sourceMap = {};
+  rows.forEach(r => {
+    if (!r.utm_source) return;
+    const key = r.utm_source + (r.utm_medium ? " / " + r.utm_medium : "");
+    sourceMap[key] = (sourceMap[key] || 0) + 1;
+  });
+  const sourceRows = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]).map(([k, v]) => `
+    <div class="trend-row"><span>${k}</span><span>${v} 人</span></div>`).join("")
+    || `<div class="trend-row"><span>暂无资料（还没有用带 utm_source 的连接带来报名）</span></div>`;
+
   el.innerHTML = `
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">总报名人数</div></div>
     <div class="trend-block"><h4>按天报名趋势（最近 14 天）</h4><div class="trend-list">${dayRows}</div></div>
-    <div class="trend-block"><h4>每个代理带来几人</h4><div class="trend-list">${agentRows}</div></div>`;
+    <div class="trend-block"><h4>每个代理带来几人</h4><div class="trend-list">${agentRows}</div></div>
+    <div class="trend-block"><h4>按渠道来源统计</h4><div class="trend-list">${sourceRows}</div></div>`;
 }
 
 // 导出 CSV：前面加 ﻿（BOM）是为了让 Excel 打开时中文不会变乱码。
 function exportCsv() {
   const rows = lastLeadsRows;
-  const header = ["提交时间", "姓名", "邮箱", "电话", "城市", "留言", "代理代码", "utm_source", "utm_medium"];
+  const header = ["提交时间", "姓名", "邮箱", "电话", "城市", "留言", "代理代码", "utm_source", "utm_medium", "备注"];
   const lines = [header.join(",")];
   rows.forEach(r => {
     const cells = [
       new Date(r.created_at).toLocaleString("zh-CN"),
       r.name || "", r.email || "", r.phone || "", r.city || "",
-      (r.message || "").replace(/\n/g, " "), r.agent_code || "", r.utm_source || "", r.utm_medium || ""
+      (r.message || "").replace(/\n/g, " "), r.agent_code || "", r.utm_source || "", r.utm_medium || "", r.remark || ""
     ];
     lines.push(cells.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
   });
@@ -535,8 +705,10 @@ function showEditor(email) {
   document.getElementById("editor-view").style.display = "block";
   document.getElementById("who-email").textContent = email;
   initTabs();
-  loadMergedContent().then(() => {
+  loadMergedContent().then(async () => {
     renderTemplates();
+    renderUtmLinks();
+    await loadAgentLinks(); // 要先读到标签对照表，报名名单/Overview 才能正确显示名字
     loadLeads();
   });
 }
@@ -571,6 +743,9 @@ async function init() {
 
   const exportBtn = document.getElementById("export-csv");
   if (exportBtn) exportBtn.addEventListener("click", exportCsv);
+
+  const createLinkBtn = document.getElementById("create-agent-link-btn");
+  if (createLinkBtn) createLinkBtn.addEventListener("click", createAgentLink);
 
   const addTplBtn = document.getElementById("add-template-btn");
   if (addTplBtn) {
