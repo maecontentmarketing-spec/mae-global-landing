@@ -198,11 +198,12 @@
   /* ---------- Contact form ---------- */
   .form-field{margin-bottom:20px;}
   .form-field label{display:block;font-weight:700;font-size:14.5px;margin-bottom:8px;}
-  .form-field input,.form-field textarea{
+  .form-field input,.form-field textarea,.form-field select{
     width:100%;border:1px solid var(--card-border);background:var(--cream);
     border-radius:12px;padding:13px 16px;font-size:15px;font-family:inherit;color:var(--ink);
   }
   .form-field textarea{min-height:100px;resize:vertical;}
+  .form-field select{appearance:auto;}
 
   /* ---------- Closing ---------- */
   .closing{text-align:center;padding:48px 0;}
@@ -352,6 +353,8 @@
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:var(--ink-soft);word-break:break-all;}
 .copy-btn{white-space:nowrap;}
 .remark-input{width:150px;font-size:13px;padding:6px 8px;}
+.checkbox-inline{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--ink-soft);margin-bottom:14px;cursor:pointer;}
+.reminded-checkbox{width:18px;height:18px;cursor:pointer;}
 
 /* ---------- Admin: leads table Email cell ---------- */
 .email-cell{display:flex;align-items:center;gap:8px;}
