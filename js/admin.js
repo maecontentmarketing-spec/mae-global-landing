@@ -102,16 +102,18 @@ function renderAgentLinksList() {
   const origin = location.origin;
   el.innerHTML = `
     <table class="leads-table">
-      <thead><tr><th>标签 / 代码</th><th>邀请连接</th><th>查名单连接</th></tr></thead>
+      <thead><tr><th>标签 / 代码</th><th>邀请连接</th><th>查名单连接</th><th>自我介绍连接</th></tr></thead>
       <tbody>
         ${agentLinksList.map(a => {
           const refUrl = `${origin}/?ref=${a.code}`;
           const listUrl = `${origin}/my-list.html?code=${a.code}&key=${a.view_token}`;
+          const profileUrl = `${origin}/agent-profile.html?ref=${a.code}`;
           return `
           <tr>
             <td>${a.label}<br><span class="hint" style="margin:0;">代码：${a.code}</span></td>
             <td><div class="link-row-url mono">${refUrl}</div><button type="button" class="link-btn copy-btn" data-copy="${refUrl}">复制</button></td>
             <td><div class="link-row-url mono">${listUrl}</div><button type="button" class="link-btn copy-btn" data-copy="${listUrl}">复制</button></td>
+            <td><div class="link-row-url mono">${profileUrl}</div><button type="button" class="link-btn copy-btn" data-copy="${profileUrl}">复制</button></td>
           </tr>`;
         }).join("")}
       </tbody>
