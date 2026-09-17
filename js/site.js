@@ -295,6 +295,7 @@ function initForm() {
       email: form.email.value.trim().toLowerCase(),
       phone: form.phone.value.trim(),
       city: form.city.value.trim(),
+      intent: form.intent ? form.intent.value.trim() : "",
       message: form.message.value.trim(),
       agent_code: AGENT_CODE,
       utm_source: UTM_SOURCE,

@@ -480,23 +480,43 @@ async function loadLeads() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="9">读取失败：${error.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11">读取失败：${error.message}</td></tr>`;
     return;
   }
   lastLeadsRows = data || [];
 
-  tbody.innerHTML = lastLeadsRows.map((r, i) => `
+  renderLeadsTable();
+  updateNextSessionHint();
+  loadOverview(lastLeadsRows);
+}
+
+// 把 lastLeadsRows 画到表格上——单独拆出来，是因为「只显示还没提醒的」这个筛选
+// 只需要重新画表格，不用重新去 Supabase 抓一次资料。
+function renderLeadsTable() {
+  const tbody = document.getElementById("leads-body");
+  if (!tbody) return;
+  const onlyUnreminded = document.getElementById("filter-unreminded");
+  const filtered = (onlyUnreminded && onlyUnreminded.checked)
+    ? lastLeadsRows.filter(r => !r.reminded)
+    : lastLeadsRows;
+
+  tbody.innerHTML = filtered.map(r => {
+    const i = lastLeadsRows.indexOf(r); // Email 按钮用「在完整名单里的位置」，跟筛选无关
+    return `
     <tr>
       <td>${new Date(r.created_at).toLocaleString("zh-CN")}</td>
       <td>${r.name || ""}</td>
       <td>${r.email || ""}</td>
       <td>${r.phone || ""}</td>
       <td>${r.city || ""}</td>
+      <td>${r.intent || ""}</td>
       <td>${displayAgentCode(r.agent_code)}</td>
       <td>${r.utm_source ? (r.utm_source + (r.utm_medium ? " / " + r.utm_medium : "")) : ""}</td>
       <td>${remarkInputHtml(r.id, r.remark)}</td>
+      <td>${remindedCheckboxHtml(r.id, r.reminded)}</td>
       <td>${emailButtonHtml(i)}</td>
-    </tr>`).join("") || `<tr><td colspan="9">暂时没有报名资料</td></tr>`;
+    </tr>`;
+  }).join("") || `<tr><td colspan="11">${onlyUnreminded && onlyUnreminded.checked ? "都已经提醒过了，没有还没提醒的人" : "暂时没有报名资料"}</td></tr>`;
 
   document.querySelectorAll(".email-open-btn").forEach(btn => {
     btn.addEventListener("click", () => openGmailForLead(Number(btn.getAttribute("data-idx"))));
@@ -506,7 +526,9 @@ async function loadLeads() {
     input.addEventListener("change", () => saveRemark(input));
   });
 
-  loadOverview(lastLeadsRows);
+  document.querySelectorAll(".reminded-checkbox").forEach(cb => {
+    cb.addEventListener("change", () => saveReminded(cb));
+  });
 }
 
 // 「备注/负责人」栏位：例如裸报名（没有代理代码）的先标记「待分配」，之后确定 leader 人选再回来填名字。
@@ -527,6 +549,49 @@ async function saveRemark(input) {
   }
   const row = lastLeadsRows.find(r => r.id === id);
   if (row) row.remark = value;
+}
+
+// 「提醒」栏位：Zoom 前一天用 Email 按钮发完提醒信之后，勾起来代表「这个人处理过了」。
+function remindedCheckboxHtml(id, reminded) {
+  return `<input type="checkbox" class="reminded-checkbox" data-id="${id}" ${reminded ? "checked" : ""}>`;
+}
+
+async function saveReminded(checkbox) {
+  const id = checkbox.getAttribute("data-id");
+  const value = checkbox.checked;
+  checkbox.disabled = true;
+  const { error } = await supabaseClient.from("registrations").update({ reminded: value }).eq("id", id);
+  checkbox.disabled = false;
+  if (error) {
+    alert("提醒状态保存失败：" + error.message);
+    checkbox.checked = !value;
+    return;
+  }
+  const row = lastLeadsRows.find(r => r.id === id);
+  if (row) row.reminded = value;
+  // 如果正在筛选「只显示还没提醒的」，勾了之后这一行要马上从列表消失。
+  const onlyUnreminded = document.getElementById("filter-unreminded");
+  if (onlyUnreminded && onlyUnreminded.checked) renderLeadsTable();
+}
+
+// 找出 event.sessions 里「还没开始、离现在最近」的一场，在报名名单上方提示一句，
+// 方便对照「提醒名单」要提醒的是哪一场。逻辑跟前台倒数计时用的是同一个判断方式。
+function getNearestSessionText() {
+  const sessions = (currentContent && currentContent.event && currentContent.event.sessions) || [];
+  const upcoming = sessions
+    .filter(Boolean)
+    .map(s => new Date(s.length === 16 ? s + ":00+08:00" : s))
+    .filter(d => !isNaN(d.getTime()) && d.getTime() > Date.now())
+    .sort((a, b) => a - b);
+  if (!upcoming.length) return "目前后台还没有设置未来的 Zoom 场次（在「内容 & 排版」Tab 的「⑦ 时间地点」可以加场次）。";
+  const target = upcoming[0];
+  const diffDays = Math.ceil((target.getTime() - Date.now()) / 86400000);
+  return `最近一场 Zoom：${target.toLocaleString("zh-CN", { timeZone: "Asia/Kuala_Lumpur" })}（还有 ${diffDays} 天），提醒名单建议这场开始前一天处理完。`;
+}
+
+function updateNextSessionHint() {
+  const el = document.getElementById("next-session-hint");
+  if (el) el.textContent = getNearestSessionText();
 }
 
 // 每一行报名资料后面的「Email」栏位：一个模板下拉选单 + 一个开 Gmail 的按钮。
@@ -593,23 +658,38 @@ function loadOverview(rows) {
     <div class="trend-row"><span>${k}</span><span>${v} 人</span></div>`).join("")
     || `<div class="trend-row"><span>暂无资料（还没有用带 utm_source 的连接带来报名）</span></div>`;
 
+  // 按意向等级统计：看这批报名的人大概是什么意向组成。
+  const intentMap = {};
+  rows.forEach(r => {
+    const key = r.intent || "未填写";
+    intentMap[key] = (intentMap[key] || 0) + 1;
+  });
+  const intentRows = Object.entries(intentMap).sort((a, b) => b[1] - a[1]).map(([k, v]) => `
+    <div class="trend-row"><span>${k}</span><span>${v} 人</span></div>`).join("")
+    || `<div class="trend-row"><span>暂无资料</span></div>`;
+
+  const unremindedCount = rows.filter(r => !r.reminded).length;
+
   el.innerHTML = `
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">总报名人数</div></div>
+    <div class="stat-card"><div class="stat-num">${unremindedCount}</div><div class="stat-label">还没标记「已提醒」的人数</div></div>
     <div class="trend-block"><h4>按天报名趋势（最近 14 天）</h4><div class="trend-list">${dayRows}</div></div>
     <div class="trend-block"><h4>每个代理带来几人</h4><div class="trend-list">${agentRows}</div></div>
-    <div class="trend-block"><h4>按渠道来源统计</h4><div class="trend-list">${sourceRows}</div></div>`;
+    <div class="trend-block"><h4>按渠道来源统计</h4><div class="trend-list">${sourceRows}</div></div>
+    <div class="trend-block"><h4>按意向等级统计</h4><div class="trend-list">${intentRows}</div></div>`;
 }
 
 // 导出 CSV：前面加 ﻿（BOM）是为了让 Excel 打开时中文不会变乱码。
 function exportCsv() {
   const rows = lastLeadsRows;
-  const header = ["提交时间", "姓名", "邮箱", "电话", "城市", "留言", "代理代码", "utm_source", "utm_medium", "备注"];
+  const header = ["提交时间", "姓名", "邮箱", "电话", "城市", "意向", "留言", "代理代码", "utm_source", "utm_medium", "备注", "已提醒"];
   const lines = [header.join(",")];
   rows.forEach(r => {
     const cells = [
       new Date(r.created_at).toLocaleString("zh-CN"),
-      r.name || "", r.email || "", r.phone || "", r.city || "",
-      (r.message || "").replace(/\n/g, " "), r.agent_code || "", r.utm_source || "", r.utm_medium || "", r.remark || ""
+      r.name || "", r.email || "", r.phone || "", r.city || "", r.intent || "",
+      (r.message || "").replace(/\n/g, " "), r.agent_code || "", r.utm_source || "", r.utm_medium || "", r.remark || "",
+      r.reminded ? "是" : "否"
     ];
     lines.push(cells.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
   });
@@ -740,6 +820,9 @@ async function init() {
   });
 
   document.getElementById("refresh-leads").addEventListener("click", loadLeads);
+
+  const filterUnreminded = document.getElementById("filter-unreminded");
+  if (filterUnreminded) filterUnreminded.addEventListener("change", renderLeadsTable);
 
   const exportBtn = document.getElementById("export-csv");
   if (exportBtn) exportBtn.addEventListener("click", exportCsv);
