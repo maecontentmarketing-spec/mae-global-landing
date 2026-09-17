@@ -92,10 +92,12 @@
           <button class="link-btn" id="refresh-leads">刷新</button>
         </span>
       </h3>
-      <p class="hint">「备注」栏位可以直接打字，填完点别的地方就会自动保存，方便先标记「待分配」之类的状态。</p>
+      <p class="hint" id="next-session-hint"></p>
+      <p class="hint">「备注」「提醒」栏位都可以直接打字/打勾，填完点别的地方就会自动保存。「提醒」是给 Zoom 前一天要提醒报名者用的，勾了代表你已经发过提醒信了。</p>
+      <label class="checkbox-inline"><input type="checkbox" id="filter-unreminded"> 只显示还没提醒的</label>
       <div style="overflow-x:auto;">
         <table class="leads-table" id="leads-table">
-          <thead><tr><th>时间</th><th>姓名</th><th>邮箱</th><th>电话</th><th>城市</th><th>代理代码</th><th>来源</th><th>备注</th><th>Email</th></tr></thead>
+          <thead><tr><th>时间</th><th>姓名</th><th>邮箱</th><th>电话</th><th>城市</th><th>意向</th><th>代理代码</th><th>来源</th><th>备注</th><th>提醒</th><th>Email</th></tr></thead>
           <tbody id="leads-body"></tbody>
         </table>
       </div>
