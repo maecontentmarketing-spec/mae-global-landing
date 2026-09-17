@@ -344,6 +344,15 @@
 }
 .trend-row:last-child{border-bottom:none;}
 
+/* ---------- Admin: 专属连接工具（UTM 现成连接 / 生成专属连接） ---------- */
+.link-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+.link-row input{flex:1;min-width:200px;}
+.link-row-label{font-size:13.5px;color:var(--ink-soft);min-width:170px;}
+.link-row-url{flex:1;min-width:200px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:var(--ink-soft);word-break:break-all;}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:var(--ink-soft);word-break:break-all;}
+.copy-btn{white-space:nowrap;}
+.remark-input{width:150px;font-size:13px;padding:6px 8px;}
+
 /* ---------- Admin: leads table Email cell ---------- */
 .email-cell{display:flex;align-items:center;gap:8px;}
 .email-cell select{
