@@ -192,7 +192,7 @@ function render(content) {
 
   // Highlights
   const hg = document.getElementById("highlights-grid");
-  hg.innerHTML = c.highlights.map(h => `
+  hg.innerHTML = (Array.isArray(c.highlights) ? c.highlights : DEFAULT_CONTENT.highlights).map(h => `
     <div class="highlight-card">
       <div class="emoji-badge">${h.emoji}</div>
       <h4>${h.title}</h4>
@@ -301,7 +301,14 @@ async function loadContent() {
     if (error) throw error;
     if (data && data.length) {
       data.forEach(row => {
-        if (merged[row.id]) {
+        if (merged[row.id] === undefined) return;
+        if (Array.isArray(merged[row.id])) {
+          // 像「四大亮点」这种整个板块本身就是清单（不是清单包在物件里）的，
+          // 要整个清单直接替换，不能用 Object.assign 合并——
+          // 合并会把清单拆成 {0:.., 1:..} 这种物件，害后面 .map() 直接报错、
+          // 导致后面所有板块（包含图片）都渲染不出来。
+          if (Array.isArray(row.content)) merged[row.id] = row.content;
+        } else {
           merged[row.id] = Object.assign({}, merged[row.id], row.content);
         }
       });
