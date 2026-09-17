@@ -118,6 +118,45 @@ function applyLayout(layout) {
     main.appendChild(el);
     el.hidden = hidden.includes(key);
   });
+  // 代理邀请卡片不属于后台可拖拽的板块，固定紧跟在 Hero 后面显示，
+  // 不管 Hero 有没有被拖到别的位置，都重新贴到它后面。
+  const heroEl = main.querySelector('[data-section-key="hero"]');
+  const inviteEl = document.getElementById("agent-invite-card");
+  if (heroEl && inviteEl) heroEl.insertAdjacentElement("afterend", inviteEl);
+}
+
+// 「XXX 邀请你认识 MAE」动态邀请卡片：
+// 只有透过代理专属连接（网址带 ?ref=）打开、而且这个代理已经在
+// agent-profile.html 填过自我介绍时才会显示；没有 ?ref=，或者这个
+// 代码还没填过资料，卡片保持隐藏，不会出现空卡片。
+async function renderAgentInviteCard() {
+  const el = document.getElementById("agent-invite-card");
+  if (!el || !AGENT_CODE) return;
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("agent_profiles")
+      .select("name, intro, photo_url")
+      .eq("code", AGENT_CODE)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data || (!data.name && !data.intro && !data.photo_url)) return;
+
+    const name = (data.name || "").trim();
+    setText("agent-invite-title", name ? `${name} 邀请你认识 MAE` : "邀请你认识 MAE");
+    setText("agent-invite-intro", data.intro || "");
+
+    const photoEl = document.getElementById("agent-invite-photo");
+    if (data.photo_url) {
+      photoEl.innerHTML = `<img src="${data.photo_url}" alt="">`;
+    } else {
+      photoEl.textContent = name ? name.charAt(0).toUpperCase() : "M";
+    }
+
+    el.hidden = false;
+  } catch (err) {
+    console.warn("读取代理自我介绍失败，卡片保持隐藏：", err.message);
+  }
 }
 
 function render(content) {
@@ -328,3 +367,4 @@ function initForm() {
 
 loadContent();
 initForm();
+renderAgentInviteCard();
