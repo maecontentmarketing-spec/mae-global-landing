@@ -82,8 +82,10 @@ function migrateHighlights(rawArray) {
 }
 
 // 倒数计时：从 event.sessions 这个日期时间清单里，挑「还没开始、离现在最近」的一场，
-// 每 30 秒更新一次「还剩 X 天 X 小时 X 分钟」。全部当作马来西亚/新加坡（GMT+8）时间处理。
+// 独立成自己的深色卡片（天/时/分/秒 4 个数字方框，每秒更新一次，比较像真正的倒数计时器）。
+// 全部当作马来西亚/新加坡（GMT+8）时间处理。
 let countdownTimer = null;
+function pad2(n) { return String(n).padStart(2, "0"); }
 function renderCountdown(sessions) {
   const el = document.getElementById("event-countdown");
   if (!el) return;
@@ -103,21 +105,40 @@ function renderCountdown(sessions) {
 
   const target = upcoming[0];
   el.hidden = false;
+  el.innerHTML = `
+    <div class="countdown-label">⏰ 距离最近一场分享会还有</div>
+    <div class="countdown-boxes">
+      <div class="countdown-box"><div class="countdown-num" id="cd-days">00</div><div class="countdown-unit">天 DAYS</div></div>
+      <div class="countdown-sep">:</div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-hours">00</div><div class="countdown-unit">时 HRS</div></div>
+      <div class="countdown-sep">:</div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-mins">00</div><div class="countdown-unit">分 MIN</div></div>
+      <div class="countdown-sep">:</div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-secs">00</div><div class="countdown-unit">秒 SEC</div></div>
+    </div>`;
+  const dEl = document.getElementById("cd-days");
+  const hEl = document.getElementById("cd-hours");
+  const mEl = document.getElementById("cd-mins");
+  const sEl = document.getElementById("cd-secs");
 
   function tick() {
     const diff = target.getTime() - Date.now();
     if (diff <= 0) {
-      el.textContent = "⏰ 分享会即将开始！";
+      el.innerHTML = `<div class="countdown-started">⏰ 分享会即将开始！</div>`;
       clearInterval(countdownTimer);
       return;
     }
     const d = Math.floor(diff / 86400000);
     const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
-    el.textContent = `⏰ 距离最近一场分享会还有 ${d} 天 ${h} 小时 ${m} 分钟`;
+    const s = Math.floor((diff % 60000) / 1000);
+    dEl.textContent = pad2(d);
+    hEl.textContent = pad2(h);
+    mEl.textContent = pad2(m);
+    sEl.textContent = pad2(s);
   }
   tick();
-  countdownTimer = setInterval(tick, 30000);
+  countdownTimer = setInterval(tick, 1000);
 }
 
 // 「已有 XX 人报名」计数器：只有 register.show_counter 打开才会显示。
