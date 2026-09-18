@@ -400,6 +400,24 @@ function render(content) {
       }
     }, 250);
   }
+  // 保险措施：Instagram 那边的嵌入服务偶尔会对某几则贴文暂时性地失败（不一定是我们
+  // 网址或代码的问题），失败的时候画面上会卡成一个高度是 0 的空白 iframe。
+  // 给它一点处理时间之后，如果还是空白的，就自动换成一个可以点过去 Instagram 原帖的连结，
+  // 不要让访客看到的是一个永远空白、什么都点不了的紫色方块。
+  setTimeout(() => {
+    document.querySelectorAll("#results-grid .review-embed").forEach(embedEl => {
+      const bq = embedEl.querySelector(".instagram-media, .instagram-media-registered");
+      if (!bq) return; // 没有连结的占位图示（🖼️）不用管
+      const iframe = embedEl.querySelector("iframe");
+      const failed = !iframe || iframe.offsetHeight <= 2;
+      if (failed) {
+        const link = bq.getAttribute("data-instgrm-permalink") || "";
+        if (link) {
+          embedEl.innerHTML = `<a class="ig-embed-fallback" href="${link}" target="_blank" rel="noopener">📎 点这里查看这则 Instagram 贴文 →</a>`;
+        }
+      }
+    });
+  }, 5000);
 
   // Incentive Trip 照片墙：内容照画（有没有照片都先把标题/网格准备好），
   // 是否显示整个板块的判断放在 applyLayout 之后（见下面），才不会被「网站排版」的隐藏设定盖掉判断。
