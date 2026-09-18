@@ -108,9 +108,9 @@ const DEFAULT_CONTENT = {
     items: [
       { who: "全职妈妈", ig_link: "https://www.instagram.com/reel/DZNBkZ2h1vg/", quote: "生活安稳，却曾害怕自己停在原地。加入 MAE 后，我得到的不只是收入，更学会了成长、突破自己，也重新看见了属于自己的可能。" },
       { who: "从 Part Time 到全职 MAE — 从物理治疗师，到 MAE Partner", ig_link: "https://www.instagram.com/reel/DUYIsbtEm-0/", quote: "因为曾经走过皮肤困扰与自卑的日子，她更希望把自己的经历，变成帮助更多女生找回自信的力量。" },
-      { who: "40+ 也可以逆袭", ig_link: "https://www.instagram.com/reel/DQlPfKSCCAn/", quote: "40岁，也可以重新出发。从过去的自己，到现在的蜕变，她证明了年龄不是限制，敢于改变，人生永远都有新的可能。" },
+      { who: "40+ 也可以逆袭", ig_link: "https://www.instagram.com/reels/DQlPfKSCCAn/", quote: "40岁，也可以重新出发。从过去的自己，到现在的蜕变，她证明了年龄不是限制，敢于改变，人生永远都有新的可能。" },
       { who: "在这里她找到归属感", ig_link: "https://www.instagram.com/reel/DKRtBcMSlEg/", quote: "原本只是 Part Time 的尝试，却让她走进了一个全新的可能。从参与新加坡 Workshop，到感受到团队的支持与陪伴，她发现，MAE 带给她的不只是事业，还有一个让自己不断成长的环境。" },
-      { who: "AI课程的课后感", ig_link: "https://www.instagram.com/reel/DUqEhuEEnt2/", quote: "以前觉得 AI 很复杂，学完才发现，真正需要改变的不是工作方式，而是思维方式。原本需要花很多时间完成的事情，现在可以借助 AI 更快地完成；不会写、不知道怎么开始、没有灵感，也不再是停下来的理由。" },
+      { who: "AI课程的课后感", ig_link: "https://www.instagram.com/reels/DUqEhuEEnt2/", quote: "以前觉得 AI 很复杂，学完才发现，真正需要改变的不是工作方式，而是思维方式。原本需要花很多时间完成的事情，现在可以借助 AI 更快地完成；不会写、不知道怎么开始、没有灵感，也不再是停下来的理由。" },
       { who: "电商小白", ig_link: "https://www.instagram.com/p/DI6LVVopyzU/", quote: "从一个不敢说话、害怕被看见的人，到今天敢于表达、敢于挑战自己。一路走来，我没有变成别人，而是慢慢成为了更好的自己。从「不敢」到「我可以」。" }
     ]
   },
