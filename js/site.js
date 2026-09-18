@@ -46,6 +46,19 @@ function setHref(id, hrefPrefix, value) {
   }
 }
 
+// Footer「关注我们」的 Instagram / WhatsApp 连结：後台填了网址才显示这个连结，
+// 没填的话直接隐藏（不会留一个点了没反应的死连结）。
+function setSocialLink(id, url) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (url) {
+    el.setAttribute("href", url);
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+  }
+}
+
 // 把某个占位框换成真正的照片（如果 admin 后台已经上传了图片网址）；
 // 没有上传过的话，就还原成原本的占位提示文字。
 function setMedia(id, url) {
@@ -521,10 +534,12 @@ function render(content) {
   setText("closing-line2", c.closing.line2);
 
   // Footer
-  setRichText("footer-desc", c.footer.desc);
   setHref("footer-email", "mailto:", c.footer.email);
   setHref("footer-phone", "tel:", c.footer.phone);
   setText("footer-address", c.footer.address);
+  // Instagram / WhatsApp 连结：後台没填之前，这两个连结完全不显示（不会是死连结）。
+  setSocialLink("footer-instagram", c.footer.instagram_link);
+  setSocialLink("footer-whatsapp", c.footer.whatsapp_link);
 
   // 板块排版（顺序 + 隐藏），放最后确保这时候所有板块都已经存在
   applyLayout(c.layout);
@@ -612,7 +627,8 @@ function initForm() {
       phone: form.phone.value.trim(),
       city: form.city.value.trim(),
       intent: form.intent ? form.intent.value.trim() : "",
-      message: form.message.value.trim(),
+      // Amy 要求拿掉「想了解的内容 / 留言」这个栏位，表单上已经没有这个 input 了，
+      // 所以这里也不再读取／送出 message，避免 form.message 是 undefined 会报错。
       agent_code: AGENT_CODE,
       utm_source: UTM_SOURCE,
       utm_medium: UTM_MEDIUM

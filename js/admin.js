@@ -15,7 +15,7 @@ const TEXT_FIELDS = {
   team_building: [["title", "标题", "text"], ["subtitle", "副标题", "textarea"]],
   register: [["p1", "段落 1", "textarea"], ["p2", "段落 2", "textarea"], ["button", "按钮文字", "text"]],
   closing: [["line1", "第一行", "text"], ["line2", "第二行", "text"]],
-  footer: [["desc", "品牌简介", "textarea"], ["email", "联系邮箱", "text"], ["phone", "联系电话", "text"], ["address", "地址", "text"]]
+  footer: [["email", "联系邮箱", "text"], ["phone", "联系电话", "text"], ["address", "地址", "text"], ["instagram_link", "Instagram 连结", "text"], ["whatsapp_link", "WhatsApp 连结", "text"]]
 };
 
 let lastLeadsRows = []; // 上次读到的报名名单（给 Email 按钮 / CSV 导出用）

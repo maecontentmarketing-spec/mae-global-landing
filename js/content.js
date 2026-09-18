@@ -173,11 +173,14 @@ const DEFAULT_CONTENT = {
     line1: "这个时代，不会等你想清楚才往前走。",
     line2: "先花一点时间了解，给自己留一个提前布局的机会。"
   },
+  // Amy 要求拿掉 Logo/品牌简介/「关于品牌」这几块，footer 只留联系我们 + 关注我们；
+  // 微信连结也拿掉，Instagram / WhatsApp 改成後台自己填连结（没填之前网站上不会显示这两个连结）。
   footer: {
-    desc: "MAE GLOBAL 是美容健康事业，也是 AI 社交电商平台，致力于打造东南亚事业伙伴网络。",
     email: "partners@maeglobal.com",
     phone: "+1 (800) 555-1234",
-    address: "地址：XX市XX区XX路123号"
+    address: "地址：XX市XX区XX路123号",
+    instagram_link: "",
+    whatsapp_link: ""
   },
   // 网站板块的显示顺序 + 隐藏设定（后台「网站排版」可以拖拽调整）。
   // footer（页脚）固定放最后、header 固定放最前，不受这个排版控制。
