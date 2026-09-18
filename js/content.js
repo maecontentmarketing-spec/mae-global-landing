@@ -73,7 +73,8 @@ const DEFAULT_CONTENT = {
     { emoji: "🌏", title: "市场竞争力", desc: "一套可复制的打法，让你不只赚马币，也能赚新币、港币——我们已经在马来西亚、新加坡、香港三地布局，有实际跑通的海外发展路径" }
   ],
   brand: {
-    logo_image: "", product_image: "", cert_image: "",
+    logo_image: "", product_image: "", cert_image: "", // 旧版 3 个固定照片栏位，只留着给「搬迁旧资料」用，不要在这里改，改版后请用下面的 images
+    images: [], // 新版：照片改成可以自由加/减的清单，跟 Incentive Trip 用同一套逻辑
     stat1_value: "2017", stat1_label: "品牌成立",
     stat2_value: "17+", stat2_label: "产品系列",
     stat3_value: "4", stat3_label: "布局国家/地区",

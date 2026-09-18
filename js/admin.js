@@ -381,13 +381,28 @@ function sessionsField(sessions) {
     </div>`;
 }
 
-// Incentive Trip 照片墙：跟 sessionsField 一样，用「+ 加一张照片 / 移除」直接操作画面上的元素，
-// 不会重新整个板块，才不会把你还没保存的其他文字栏位盖掉。每一张照片都是一个 imageField，
-// 只是栏位路径用 _trip_img.N，保存的时候 saveSection 会把它们收集成一个清单存回 images 阵列。
-function incentiveTripImageField(idx, url) {
-  const field = imageField(`_trip_img.${idx}`, `照片 ${idx + 1}`, url);
-  // 在 imageField 外面包一层，加上「移除这张」按钮
-  return `<div class="trip-img-row" data-trip-idx="${idx}">${field}<button type="button" class="link-btn remove-trip-image">移除这张</button></div>`;
+// 可以自由加/减张数的照片清单：跟 sessionsField 一样，用「+ 加一张照片 / 移除」直接操作
+// 画面上的元素，不会重新整个板块，才不会把你还没保存的其他文字栏位盖掉。
+// prefix 用来区分是哪个板块的清单（例如 "trip" = Incentive Trip、"brand" = MAE 品牌背书），
+// 每一张照片都是一个 imageField，栏位路径是 _<prefix>_img.N，
+// 保存的时候 saveSection 会把它们收集成一个清单存回 images 阵列。
+function dynamicImageField(prefix, idx, url) {
+  const field = imageField(`_${prefix}_img.${idx}`, `照片 ${idx + 1}`, url);
+  return `<div class="dyn-img-row" data-dyn-prefix="${prefix}" data-dyn-idx="${idx}">${field}<button type="button" class="link-btn remove-dyn-image" data-dyn-prefix="${prefix}">移除这张</button></div>`;
+}
+
+// 整组「照片清单 + 加一张照片按钮」，给 renderSection 直接拼进某个板块的 inner html。
+function dynamicImageListBlock(prefix, listId, images) {
+  return `<div id="${listId}">${(images || []).map((url, i) => dynamicImageField(prefix, i, url)).join("")}</div>
+    <button type="button" class="link-btn add-dyn-image-btn" data-dyn-prefix="${prefix}" data-dyn-list="${listId}">+ 加一张照片</button>`;
+}
+
+// 兼容旧版「MAE 品牌背书」的三个固定照片栏位（Logo / 产品图 / 证书照片）：
+// 改版后统一变成一个可以自由加/减的照片清单。这里只在还没有 images 清单内容时，
+// 把旧栏位里已经上传过的照片带进来，保证旧资料不会因为改版而消失。
+function migrateBrandImages(brand) {
+  if (Array.isArray(brand.images) && brand.images.length) return brand.images;
+  return [brand.logo_image, brand.product_image, brand.cert_image].filter(Boolean);
 }
 
 async function handleImageUpload(inputEl) {
@@ -427,9 +442,8 @@ function renderSection(key, data) {
     inner += imageField("image", "Kate 创办人照片", data.kate.image);
   }
   if (key === "brand") {
-    inner += imageField("logo_image", "MAE Logo", data.brand.logo_image);
-    inner += imageField("product_image", "产品图", data.brand.product_image);
-    inner += imageField("cert_image", "纪录认证证书照片", data.brand.cert_image);
+    inner += dynamicImageListBlock("brand", "brand-images-list", migrateBrandImages(data.brand));
+    inner += `<p class="hint" style="margin-top:10px;">照片可以自由加/减，不限张数（原本 Logo / 产品图 / 证书照片这三个固定栏位已经自动搬过来了，删掉不需要的那张、保存就好）。</p>`;
   }
 
   if (TEXT_FIELDS[key]) {
@@ -487,9 +501,7 @@ function renderSection(key, data) {
   }
 
   if (key === "incentive_trip") {
-    const images = data.incentive_trip.images || [];
-    inner += `<div id="trip-images-list">${images.map((url, i) => incentiveTripImageField(i, url)).join("")}</div>`;
-    inner += `<button type="button" class="link-btn" id="add-trip-image-btn">+ 加一张照片</button>`;
+    inner += dynamicImageListBlock("trip", "trip-images-list", data.incentive_trip.images || []);
     inner += `<p class="hint" style="margin-top:10px;">一张照片都还没上传的时候，网站上这个板块会自动隐藏，不会出现空板块。</p>`;
   }
 
@@ -619,24 +631,28 @@ function renderAllSections() {
         inp.setAttribute("data-field", `_sessions.${i}`);
       });
     }
-    // Incentive Trip「+ 加一张照片」：加一个空的照片上传栏位，不用整个板块重新渲染。
-    if (e.target.id === "add-trip-image-btn") {
-      const list = document.getElementById("trip-images-list");
+    // 通用的「+ 加一张照片」：Incentive Trip、MAE 品牌背书都共用，加一个空的照片上传栏位，不用整个板块重新渲染。
+    if (e.target.classList.contains("add-dyn-image-btn")) {
+      const prefix = e.target.getAttribute("data-dyn-prefix");
+      const listId = e.target.getAttribute("data-dyn-list");
+      const list = document.getElementById(listId);
       const idx = list.children.length;
       const wrapper = document.createElement("div");
-      wrapper.innerHTML = incentiveTripImageField(idx, "");
+      wrapper.innerHTML = dynamicImageField(prefix, idx, "");
       list.appendChild(wrapper.firstElementChild);
     }
-    // Incentive Trip「移除这张」：移除这一张照片栏位，并把后面栏位的 data-field 编号往前挪，
+    // 通用的「移除这张」：移除这一张照片栏位，并把后面栏位的 data-field 编号往前挪，
     // 保存的时候才会照正确顺序收集成一个没有空位的 images 清单。
-    if (e.target.classList.contains("remove-trip-image")) {
-      const list = e.target.closest("#trip-images-list");
-      e.target.closest(".trip-img-row").remove();
-      list.querySelectorAll(".trip-img-row").forEach((row, i) => {
-        row.setAttribute("data-trip-idx", i);
-        const hidden = row.querySelector('input[type="hidden"]');
-        if (hidden) hidden.setAttribute("data-field", `_trip_img.${i}`);
-        const label = row.querySelector(".admin-field > label");
+    if (e.target.classList.contains("remove-dyn-image")) {
+      const prefix = e.target.getAttribute("data-dyn-prefix");
+      const row = e.target.closest(".dyn-img-row");
+      const list = row.parentElement;
+      row.remove();
+      list.querySelectorAll(".dyn-img-row").forEach((r, i) => {
+        r.setAttribute("data-dyn-idx", i);
+        const hidden = r.querySelector('input[type="hidden"]');
+        if (hidden) hidden.setAttribute("data-field", `_${prefix}_img.${i}`);
+        const label = r.querySelector(".admin-field > label");
         if (label) label.textContent = `照片 ${i + 1}`;
       });
     }
@@ -677,6 +693,8 @@ async function saveSection(key) {
   // Incentive Trip 照片也是一个清单，先收集起来最后再一次覆盖，
   // 这样移除过某几张照片之后，才不会留下旧的空位。
   const tripImagesList = [];
+  // MAE 品牌背书的照片现在也改成清单了，跟 Incentive Trip 用同一套收集逻辑。
+  const brandImagesList = [];
 
   card.querySelectorAll("[data-field]").forEach(el => {
     const path = el.getAttribute("data-field");
@@ -712,6 +730,9 @@ async function saveSection(key) {
     } else if (path.startsWith("_trip_img.")) {
       const idx = Number(path.split(".")[1]);
       tripImagesList[idx] = val;
+    } else if (path.startsWith("_brand_img.")) {
+      const idx = Number(path.split(".")[1]);
+      brandImagesList[idx] = val;
     } else if (path === "_good") {
       updated.good = val.split("\n");
     } else if (path === "_bad") {
@@ -726,6 +747,9 @@ async function saveSection(key) {
   }
   if (key === "incentive_trip") {
     updated.images = tripImagesList.filter(Boolean);
+  }
+  if (key === "brand") {
+    updated.images = brandImagesList.filter(Boolean);
   }
 
   currentContent[key] = updated;

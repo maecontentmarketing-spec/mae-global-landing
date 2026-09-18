@@ -59,6 +59,13 @@ function setMedia(id, url) {
   }
 }
 
+// MAE 品牌背书的照片：优先用新版的 images 清单；如果还是旧资料（清单是空的，
+// 但旧的 3 个固定栏位有值），就从旧栏位自动组一份出来，照片不会因为改版而不见。
+function migrateBrandImages(brand) {
+  if (Array.isArray(brand.images) && brand.images.length) return brand.images;
+  return [brand.logo_image, brand.product_image, brand.cert_image].filter(Boolean);
+}
+
 // 倒数计时：从 event.sessions 这个日期时间清单里，挑「还没开始、离现在最近」的一场，
 // 每 30 秒更新一次「还剩 X 天 X 小时 X 分钟」。全部当作马来西亚/新加坡（GMT+8）时间处理。
 let countdownTimer = null;
@@ -321,9 +328,13 @@ function render(content) {
   setRichText("brand-p1", c.brand.p1);
   setRichText("brand-p2", c.brand.p2);
   setRichText("brand-p3", c.brand.p3);
-  setMedia("brand-logo-media", c.brand.logo_image);
-  setMedia("brand-product-media", c.brand.product_image);
-  setMedia("brand-cert-media", c.brand.cert_image);
+  const brandImages = migrateBrandImages(c.brand);
+  const brandGrid = document.getElementById("brand-images-grid");
+  if (brandGrid) {
+    brandGrid.innerHTML = brandImages.length
+      ? brandImages.map(url => `<div class="media-slot"><img src="${url}" alt=""></div>`).join("")
+      : `<div class="media-slot">[ 尚未上传照片 ]</div>`;
+  }
 
   // Milestones
   setText("milestones-title", c.milestones.title);
