@@ -116,11 +116,32 @@ async function renderRegisterCounter(show) {
   }
 }
 
+// 后台「网站排版」存的顺序清单，可能是在某个新板块（例如 incentive_trip）上线「之前」存的，
+// 清单里当然不会有这个新 key。这个函数把「预设清单里有、但这份（可能是旧的）清单里没有」
+// 的 key 补进去——补在它在预设清单里最近的、「前一个也在这份清单里」的 key 后面，
+// 而不是漏掉不处理（漏掉的话，下面 applyLayout 逐个 appendChild 重新排列时，
+// 没被点名的板块会被晾在最前面，跑到 Hero 前面去，不是它该在的位置）。
+function mergeLayoutOrder(savedOrder) {
+  const defaultOrder = DEFAULT_CONTENT.layout.order;
+  const order = (savedOrder && savedOrder.length) ? savedOrder.slice() : defaultOrder.slice();
+  const missing = defaultOrder.filter(k => order.indexOf(k) === -1);
+  missing.forEach(key => {
+    const defaultIdx = defaultOrder.indexOf(key);
+    let insertAfter = -1;
+    for (let i = defaultIdx - 1; i >= 0; i--) {
+      const idx = order.indexOf(defaultOrder[i]);
+      if (idx !== -1) { insertAfter = idx; break; }
+    }
+    order.splice(insertAfter + 1, 0, key);
+  });
+  return order;
+}
+
 // 把板块按照后台设定的顺序排好、该隐藏的隐藏。找不到设定就维持网页原本的顺序。
 function applyLayout(layout) {
   const main = document.getElementById("page-sections");
   if (!main) return;
-  const order = (layout && layout.order && layout.order.length) ? layout.order : DEFAULT_CONTENT.layout.order;
+  const order = mergeLayoutOrder(layout && layout.order);
   const hidden = (layout && layout.hidden) || [];
   order.forEach(key => {
     const el = main.querySelector(`[data-section-key="${key}"]`);

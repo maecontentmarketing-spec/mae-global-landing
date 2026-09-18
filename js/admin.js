@@ -513,10 +513,30 @@ function renderSection(key, data) {
     </div>`;
 }
 
+// 之前存过的「网站排版」顺序清单，可能是在某个新板块（例如 incentive_trip）上线「之前」
+// 存的，清单里不会有这个新 key，这张卡片就不会显示它、也没办法拖它调整顺序。
+// 这个函数把预设清单里有、但这份（可能是旧的）清单里没有的 key 补进去——
+// 补在它在预设清单里最近的、「前一个也在这份清单里」的 key 后面，跟 site.js 的逻辑一致。
+function mergeLayoutOrder(savedOrder) {
+  const defaultOrder = DEFAULT_CONTENT.layout.order;
+  const order = (savedOrder && savedOrder.length) ? savedOrder.slice() : defaultOrder.slice();
+  const missing = defaultOrder.filter(k => order.indexOf(k) === -1);
+  missing.forEach(key => {
+    const defaultIdx = defaultOrder.indexOf(key);
+    let insertAfter = -1;
+    for (let i = defaultIdx - 1; i >= 0; i--) {
+      const idx = order.indexOf(defaultOrder[i]);
+      if (idx !== -1) { insertAfter = idx; break; }
+    }
+    order.splice(insertAfter + 1, 0, key);
+  });
+  return order;
+}
+
 // 「网站板块排版」卡片：拖拽调整顺序 + 勾选隐藏。这个不是普通的文字栏位，保存逻辑另外处理（见 saveSection）。
 function renderLayoutSection(data) {
   const layout = data.layout || DEFAULT_CONTENT.layout;
-  const order = (layout.order && layout.order.length) ? layout.order : DEFAULT_CONTENT.layout.order;
+  const order = mergeLayoutOrder(layout.order);
   const hidden = layout.hidden || [];
   const rows = order.map(key => `
     <div class="layout-row" data-layout-key="${key}">
