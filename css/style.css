@@ -304,6 +304,9 @@
     overflow:hidden;
   }
   .review-embed .instagram-media{margin:0 auto !important;width:100% !important;min-width:auto !important;max-width:100% !important;}
+  /* Instagram 嵌入失败时（少见，通常是它那边暂时性的问题）自动换上的备用连结样式。 */
+  .ig-embed-fallback{color:var(--purple-dark);font-weight:700;font-size:14px;text-decoration:none;padding:0 20px;text-align:center;}
+  .ig-embed-fallback:hover{text-decoration:underline;}
   .review-card blockquote{margin:0 0 14px;font-size:15px;color:var(--ink-soft);font-style:italic;}
   .review-card .who{border-top:1px solid var(--card-border);padding-top:12px;font-weight:700;font-size:14px;}
 
