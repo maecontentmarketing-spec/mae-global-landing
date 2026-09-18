@@ -271,6 +271,10 @@
     text-align:center;color:var(--muted);font-size:13.5px;margin-top:10px;font-style:italic;
   }
 
+  /* ---------- Incentive Trip 照片墙：手机 1 栏，电脑 3 栏；没照片时整个板块由 site.js 隐藏 ---------- */
+  .trip-gallery{display:grid;grid-template-columns:1fr;gap:14px;}
+  .trip-gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:16px;display:block;border:1px solid var(--card-border);}
+
   /* ---------- Event details ---------- */
   .event-card{
     background:linear-gradient(135deg,var(--purple) 0%,#a855f7 100%);
@@ -340,6 +344,7 @@
     .fit-grid{grid-template-columns:1fr 1fr;}
     .footer-grid{grid-template-columns:1.4fr 1fr 1fr;}
     .hero h1{font-size:46px;}
+    .trip-gallery{grid-template-columns:repeat(3,1fr);}
   }
 
 /* ---------- Form feedback (public site) ---------- */
@@ -409,6 +414,10 @@
 .img-upload-controls{flex:1;min-width:0;}
 .img-upload-controls input[type="file"]{font-size:13px;max-width:100%;}
 .img-upload-status{font-size:12.5px;color:var(--muted);margin-top:6px;}
+
+/* ---------- Admin: Incentive Trip 照片清单（每张照片一个 img-field + 移除按钮） ---------- */
+.trip-img-row{margin-bottom:14px;}
+.trip-img-row .remove-trip-image{margin-top:8px;}
 
 /* ---------- Countdown + register counter (public site) ---------- */
 .event-countdown{
