@@ -362,6 +362,11 @@
     .footer-grid{grid-template-columns:1.4fr 1fr 1fr;}
     .hero h1{font-size:46px;}
     .trip-gallery{grid-template-columns:repeat(3,1fr);}
+    .countdown-card{padding:36px 28px;}
+    .countdown-box{min-width:84px;padding:18px 14px;}
+    .countdown-num{font-size:40px;}
+    .countdown-unit{font-size:12px;}
+    .countdown-sep{font-size:32px;}
   }
 
 /* ---------- Form feedback (public site) ---------- */
@@ -437,12 +442,20 @@
 .dyn-img-row{margin-bottom:14px;}
 .dyn-img-row .remove-dyn-image{margin-top:8px;}
 
-/* ---------- Countdown + register counter (public site) ---------- */
-.event-countdown{
-  background:rgba(255,255,255,0.16);border-radius:14px;
-  padding:12px 16px;text-align:center;font-weight:700;font-size:14.5px;
-  margin:16px 0 20px;
+/* ---------- Countdown + register counter (public site) ----------
+   倒数计时独立成自己的深色卡片（黑底白字，天/时/分/秒 4 个数字方框），
+   紧贴在「时间地点」紫色卡片上面，没有设定任何未来场次时整块用 hidden 隐藏。 */
+.countdown-card{
+  background:#15121f;color:#fff;border-radius:24px;
+  padding:26px 18px;text-align:center;margin-bottom:20px;
 }
+.countdown-label{font-size:14px;color:#cabfe0;margin-bottom:16px;font-weight:700;}
+.countdown-boxes{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;}
+.countdown-box{background:#26213a;border-radius:14px;padding:12px 8px;min-width:58px;}
+.countdown-num{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
+.countdown-unit{font-size:10px;color:#a99bcf;margin-top:6px;letter-spacing:.06em;}
+.countdown-sep{font-size:22px;font-weight:800;color:#544d68;padding:0 1px;}
+.countdown-started{font-size:17px;font-weight:700;padding:8px 0;}
 .register-counter{
   text-align:center;color:var(--purple-dark);font-weight:700;font-size:14px;
   margin-bottom:16px;
