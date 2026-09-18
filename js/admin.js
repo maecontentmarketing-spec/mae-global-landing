@@ -405,6 +405,27 @@ function migrateBrandImages(brand) {
   return [brand.logo_image, brand.product_image, brand.cert_image].filter(Boolean);
 }
 
+// 「真实成果」见证清单：每一条是姓名/身份 + 见证内容 + IG 连结 三个栏位一起加/减，
+// 跟上面单张照片的清单（dynamicImageField）不一样，这里一次要处理好几个栏位，
+// 所以用自己的一套 _result_item.N.字段名 路径，跟对应的 renderAllSections 事件委派处理。
+function resultItemField(idx, item) {
+  const safe = (v) => (v || "").toString().replace(/"/g, "&quot;");
+  return `
+    <div class="result-item-row" data-result-idx="${idx}" style="border-top:1px solid var(--card-border);padding-top:12px;margin-top:12px;">
+      <label>姓名/身份</label>
+      <input type="text" data-field="_result_item.${idx}.who" value="${safe(item.who)}">
+      ${richTextField(`_result_item.${idx}.quote`, "见证内容", item.quote || "")}
+      <label style="margin-top:10px;">IG 影片/贴文连结</label>
+      <input type="text" placeholder="https://www.instagram.com/reel/..." data-field="_result_item.${idx}.ig_link" value="${safe(item.ig_link)}">
+      <button type="button" class="link-btn remove-result-item" style="margin-top:8px;">移除这一条</button>
+    </div>`;
+}
+
+function resultItemsListBlock(items) {
+  return `<div id="results-items-list">${(items || []).map((item, i) => resultItemField(i, item)).join("")}</div>
+    <button type="button" class="link-btn add-result-item-btn" style="margin-top:12px;">+ 加一条见证</button>`;
+}
+
 async function handleImageUpload(inputEl) {
   const file = inputEl.files[0];
   if (!file) return;
@@ -490,14 +511,10 @@ function renderSection(key, data) {
   }
 
   if (key === "results") {
-    inner += data.results.items.map((r, i) => `
-      <div class="admin-field" style="border-top:1px solid var(--card-border);padding-top:12px;">
-        ${imageField(`_items.${i}.image`, "照片", r.image)}
-        <label>姓名/身份</label><input type="text" data-field="_items.${i}.who" value="${r.who.replace(/"/g, "&quot;")}">
-        ${richTextField(`_items.${i}.quote`, "见证内容", r.quote)}
-        <label style="margin-top:10px;">IG 原帖网址（选填，填了见证卡片下面会出现「查看 IG 原帖」的连结）</label>
-        <input type="text" placeholder="https://www.instagram.com/p/..." data-field="_items.${i}.ig_link" value="${(r.ig_link || "").replace(/"/g, "&quot;")}">
-      </div>`).join("");
+    inner += `<div class="admin-field"><label>补充说明文字（选填，例如「影片经本人同意后使用」；留空网站上就不会出现这个提示框）</label>
+      <input type="text" data-field="warning" value="${(data.results.warning || "").replace(/"/g, "&quot;")}"></div>`;
+    inner += resultItemsListBlock(data.results.items);
+    inner += `<p class="hint" style="margin-top:10px;">每一条见证网站上会直接显示那个 IG 连结的真实贴文/影片（用 Instagram 官方的嵌入功能，有封面、可以直接点播放），不用另外上传照片；数量不限，可以自由加/减。</p>`;
   }
 
   if (key === "incentive_trip") {
@@ -656,6 +673,29 @@ function renderAllSections() {
         if (label) label.textContent = `照片 ${i + 1}`;
       });
     }
+    // 「真实成果」见证「+ 加一条见证」：加一个空白的见证栏位（姓名/身份 + 见证内容 + IG 连结），
+    // 不用整个板块重新渲染，其他还没保存的栏位才不会被盖掉。
+    if (e.target.classList.contains("add-result-item-btn")) {
+      const list = document.getElementById("results-items-list");
+      const idx = list.children.length;
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = resultItemField(idx, { who: "", quote: "", ig_link: "" });
+      list.appendChild(wrapper.firstElementChild);
+    }
+    // 「移除这一条」：移除这一条见证，并把后面几条的 data-field 编号往前挪，
+    // 保存的时候才会照正确顺序收集成一个没有空位的 items 清单。
+    if (e.target.classList.contains("remove-result-item")) {
+      const row = e.target.closest(".result-item-row");
+      const list = row.parentElement;
+      row.remove();
+      list.querySelectorAll(".result-item-row").forEach((r, i) => {
+        r.setAttribute("data-result-idx", i);
+        r.querySelectorAll("[data-field]").forEach(el => {
+          const field = el.getAttribute("data-field").split(".")[2];
+          el.setAttribute("data-field", `_result_item.${i}.${field}`);
+        });
+      });
+    }
   });
 }
 
@@ -695,6 +735,9 @@ async function saveSection(key) {
   const tripImagesList = [];
   // MAE 品牌背书的照片现在也改成清单了，跟 Incentive Trip 用同一套收集逻辑。
   const brandImagesList = [];
+  // 「真实成果」见证清单：每一条有好几个栏位（姓名/身份、见证内容、IG 连结）要一起收集，
+  // 所以这里存的是一个个对象，不是像上面那样单纯的网址清单。
+  const resultItemsList = [];
 
   card.querySelectorAll("[data-field]").forEach(el => {
     const path = el.getAttribute("data-field");
@@ -733,6 +776,11 @@ async function saveSection(key) {
     } else if (path.startsWith("_brand_img.")) {
       const idx = Number(path.split(".")[1]);
       brandImagesList[idx] = val;
+    } else if (path.startsWith("_result_item.")) {
+      const [, idx, field] = path.split(".");
+      const i = Number(idx);
+      if (!resultItemsList[i]) resultItemsList[i] = {};
+      resultItemsList[i][field] = val;
     } else if (path === "_good") {
       updated.good = val.split("\n");
     } else if (path === "_bad") {
@@ -750,6 +798,10 @@ async function saveSection(key) {
   }
   if (key === "brand") {
     updated.images = brandImagesList.filter(Boolean);
+  }
+  if (key === "results") {
+    // 移除时如果画面上还留着一个完全没填的空位，保存时把它过滤掉，不要存一条空见证。
+    updated.items = resultItemsList.filter(it => it && (it.who || it.quote || it.ig_link));
   }
 
   currentContent[key] = updated;

@@ -362,25 +362,44 @@ function render(content) {
   setText("event-timezone", c.event.timezone);
   renderCountdown(c.event.sessions);
 
-  // Results / reviews
+  // Results / reviews：每一条见证现在直接用 Instagram 官方嵌入组件画出真实的影片/贴文，
+  // 不再是照片 + 另外一个「查看 IG 原帖」连结。
   setText("results-title", c.results.title);
-  setRichText("results-warning", c.results.warning);
+  const resultsWarningEl = document.getElementById("results-warning");
+  if (resultsWarningEl) {
+    setRichText("results-warning", c.results.warning);
+    resultsWarningEl.hidden = !c.results.warning;
+  }
   const rg = document.getElementById("results-grid");
   rg.innerHTML = c.results.items.map(r => {
-    const photo = r.image
-      ? `<div class="review-photo"><img src="${r.image}" alt=""></div>`
-      : `<div class="review-photo">🖼️</div>`;
-    const igLink = r.ig_link
-      ? `<a class="ig-link" href="${r.ig_link}" target="_blank" rel="noopener">查看 IG 原帖 →</a>`
-      : "";
+    const embed = r.ig_link
+      ? `<div class="review-embed"><blockquote class="instagram-media" data-instgrm-permalink="${r.ig_link}" data-instgrm-version="14"></blockquote></div>`
+      : `<div class="review-embed">🖼️</div>`;
     return `
     <div class="review-card card">
-      ${photo}
+      ${embed}
       <blockquote>"${r.quote}"</blockquote>
-      <div class="who">${r.who} <span style="font-weight:400;color:var(--muted);">（照片经本人同意后使用）</span></div>
-      ${igLink}
+      <div class="who">${r.who} <span style="font-weight:400;color:var(--muted);">（照片/影片经本人同意后使用）</span></div>
     </div>`;
   }).join("");
+  // Instagram 的 embed.js 只会自动处理「脚本跑的时候」页面上已经有的 blockquote，
+  // 这些见证卡片是内容从 Supabase 读回来之后才动态画上去的，所以每次画完都要手动
+  // 叫它重新处理一次，不然新画出来的卡片只会是没有样式的空白 blockquote。
+  // embed.js 本身也是 async 载入的，画面出来的时候它可能都还没载入完，所以载入完成前先轮询等它。
+  if (window.instgrm && window.instgrm.Embeds) {
+    window.instgrm.Embeds.process();
+  } else {
+    let igEmbedTries = 0;
+    const igEmbedWait = setInterval(() => {
+      igEmbedTries++;
+      if (window.instgrm && window.instgrm.Embeds) {
+        window.instgrm.Embeds.process();
+        clearInterval(igEmbedWait);
+      } else if (igEmbedTries > 20) {
+        clearInterval(igEmbedWait);
+      }
+    }, 250);
+  }
 
   // Incentive Trip 照片墙：内容照画（有没有照片都先把标题/网格准备好），
   // 是否显示整个板块的判断放在 applyLayout 之后（见下面），才不会被「网站排版」的隐藏设定盖掉判断。
