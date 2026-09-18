@@ -135,11 +135,12 @@
 <!-- ============ EVENT DETAILS ============ -->
 <section data-section-key="event">
   <div class="wrap">
+    <!-- 倒数计时独立成自己的深色卡片，紧贴在时间地点卡片上面，比较显眼；没有设定任何未来场次时整块隐藏 -->
+    <div class="countdown-card" id="event-countdown" hidden></div>
     <div class="event-card">
       <div class="event-poster" id="event-poster" hidden></div>
       <h2 class="section-title" id="event-title"></h2>
       <p class="section-sub" id="event-subtitle"></p>
-      <div class="event-countdown" id="event-countdown" hidden></div>
       <div class="event-grid">
         <div class="event-item"><div class="ic">📅</div><div class="label">日期</div><div class="val" id="event-date"></div></div>
         <div class="event-item"><div class="ic">🕐</div><div class="label">时间</div><div class="val" id="event-time"></div></div>
