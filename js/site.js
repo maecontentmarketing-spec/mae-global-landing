@@ -391,12 +391,21 @@ function render(content) {
   // 板块排版（顺序 + 隐藏），放最后确保这时候所有板块都已经存在
   applyLayout(c.layout);
 
-  // Incentive Trip 没有照片时强制隐藏整个板块——放在 applyLayout 之后，
-  // 这样不管后台「网站排版」有没有勾选隐藏 incentive_trip，只要还没上传照片就一定不显示；
-  // 后台一旦上传了照片，板块的显示与否才交回「网站排版」的隐藏设定控制。
-  if (!tripImages.length) {
-    const tripSection = document.querySelector('[data-section-key="incentive_trip"]');
-    if (tripSection) tripSection.hidden = true;
+  // Incentive Trip 没有照片时强制隐藏整个板块——放在 applyLayout 之后判断，
+  // 这样不管后台「网站排版」有没有勾选隐藏 incentive_trip，只要还没上传照片就一定不显示。
+  // 这里两种情况都要「明确」设定 hidden（不能只处理没照片这一种情况）：
+  // 如果后台的「网站排版」是在这个功能上线前保存的，它存的 order 清单里根本没有
+  // incentive_trip 这个 key，上面的 applyLayout() 会直接跳过它、完全不会去动它的
+  // hidden 状态，那它就会一直卡在第一次用预设内容（没有照片）渲染时设的「隐藏」，
+  // 即使后台已经上传了照片，板块也永远不会自己出现。
+  const tripSection = document.querySelector('[data-section-key="incentive_trip"]');
+  if (tripSection) {
+    if (!tripImages.length) {
+      tripSection.hidden = true;
+    } else {
+      const hiddenByLayout = !!(c.layout && Array.isArray(c.layout.hidden) && c.layout.hidden.includes("incentive_trip"));
+      tripSection.hidden = hiddenByLayout;
+    }
   }
 }
 
