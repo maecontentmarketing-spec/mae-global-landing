@@ -115,11 +115,8 @@
     <p id="brand-p1"></p>
     <p id="brand-p2"></p>
     <p id="brand-p3"></p>
-    <div class="logo-row">
-      <div class="media-slot" id="brand-logo-media" data-placeholder="[ MAE Logo ]">[ MAE Logo ]</div>
-      <div class="media-slot" id="brand-product-media" data-placeholder="[ 产品图 ]">[ 产品图 ]</div>
-      <div class="media-slot" id="brand-cert-media" data-placeholder="[ 纪录认证证书照片 ]">[ 纪录认证证书照片 ]</div>
-    </div>
+    <!-- 照片改成后台可以自由加/减的清单，由 site.js 的 renderBrandImages() 动态画出，不再是固定的 3 个栏位 -->
+    <div class="logo-row" id="brand-images-grid"></div>
   </div>
 </section>
 
