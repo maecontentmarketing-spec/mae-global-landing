@@ -87,48 +87,10 @@
       <p class="section-sub" id="system-subtitle"></p>
     </div>
 
-    <div class="stage">
-      <div class="stage-label">阶段一：启动 <small>Foundation</small></div>
-      <div class="module-grid">
-        <div class="module-card">
-          <span class="tag">AI Mastermind</span>
-          <h4>新人启动</h4>
-          <p>一入门就有方向感，不用自己摸索。用 AI 帮你快速理清方向、建立信心，知道第一步该做什么。</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="stage">
-      <div class="stage-label">阶段二：成长 <small>Growth</small></div>
-      <div class="module-grid">
-        <div class="module-card">
-          <span class="tag">AI AdsPro</span>
-          <h4>广告增长</h4>
-          <p>不用请人、不用学复杂软件，AI AdsPro 教你用 AI 直接做出能带来客户的广告。</p>
-        </div>
-        <div class="module-card">
-          <span class="tag">AI Content Engine</span>
-          <h4>内容吸引</h4>
-          <p>教你用 AI 做内容，不只是被看见，更是让对的人主动来找你。</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="stage">
-      <div class="stage-label">阶段三：领导 <small>Leadership</small></div>
-      <div class="module-grid">
-        <div class="module-card">
-          <span class="tag">AI ClosePro</span>
-          <h4>招商成交</h4>
-          <p>不靠话术压人，而是用对的方式建立信任，自然促成对方的加入。</p>
-        </div>
-        <div class="module-card">
-          <span class="tag">AI Leadership</span>
-          <h4>团队领导</h4>
-          <p>把一个人的能力，变成一个团队的能力——学会复制系统、培养他人，带出能传承下去的团队。</p>
-        </div>
-      </div>
-    </div>
+    <!-- 5 个阶段由 site.js 的 renderGrowAccordion() 动态画出：
+         电脑版预设自动轮播、滑鼠移过去哪一张就展开哪一张；
+         手机版预设第一张展开、点其他色块切换。内容来自 content.js 的 system.stages（后台可编辑）。 -->
+    <div class="accordion" id="grow-accordion"></div>
 
     <p class="grow-footnote" id="system-footnote"></p>
   </div>
