@@ -295,13 +295,15 @@
     border-radius:14px;padding:14px 18px;font-size:13.5px;margin-bottom:28px;
   }
   .review-card{margin-bottom:20px;}
-  .review-photo{
-    background:var(--purple-light);border-radius:16px;aspect-ratio:16/9;
+  /* Instagram 嵌入卡片的外框：没有连结时显示占位图示，有连结时让 Instagram 自己的
+     嵌入组件（宽度、高度都是它自己决定的）置中显示，不强制裁切比例，不然影片会被切掉。 */
+  .review-embed{
+    background:var(--purple-light);border-radius:16px;
     display:flex;align-items:center;justify-content:center;color:#a98fce;
-    margin-bottom:16px;font-size:28px;
+    margin-bottom:16px;font-size:28px;min-height:200px;
     overflow:hidden;
   }
-  .review-photo img{width:100%;height:100%;object-fit:cover;}
+  .review-embed .instagram-media{margin:0 auto !important;width:100% !important;min-width:auto !important;max-width:100% !important;}
   .review-card blockquote{margin:0 0 14px;font-size:15px;color:var(--ink-soft);font-style:italic;}
   .review-card .who{border-top:1px solid var(--card-border);padding-top:12px;font-weight:700;font-size:14px;}
 
