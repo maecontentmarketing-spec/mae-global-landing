@@ -262,7 +262,8 @@
   .stat-num{font-size:34px;font-weight:800;color:#c084fc;}
   .stat-label{font-size:13.5px;color:#b9b4c9;margin-top:4px;}
   .brand-band p{color:#cfc9dd;font-size:14.5px;max-width:640px;margin:0 auto 14px;text-align:center;}
-  .logo-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:32px;}
+  /* auto-fit 让照片数量自由变化（2张、3张、4张…）时都能排得平衡，不会像固定 3 栏那样留空格 */
+  .logo-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-top:32px;}
   .logo-row .media-slot{background:#232037;border-color:#3a3555;color:#7a7392;aspect-ratio:1/1;}
 
   /* ---------- Milestone gallery ---------- */
@@ -416,8 +417,9 @@
 .img-upload-status{font-size:12.5px;color:var(--muted);margin-top:6px;}
 
 /* ---------- Admin: Incentive Trip 照片清单（每张照片一个 img-field + 移除按钮） ---------- */
-.trip-img-row{margin-bottom:14px;}
-.trip-img-row .remove-trip-image{margin-top:8px;}
+/* 通用的「照片清单一行」样式：Incentive Trip、MAE 品牌背书都共用这个 */
+.dyn-img-row{margin-bottom:14px;}
+.dyn-img-row .remove-dyn-image{margin-top:8px;}
 
 /* ---------- Countdown + register counter (public site) ---------- */
 .event-countdown{
