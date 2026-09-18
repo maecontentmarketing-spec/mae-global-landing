@@ -400,24 +400,34 @@ function render(content) {
       }
     }, 250);
   }
-  // 保险措施：Instagram 那边的嵌入服务偶尔会对某几则贴文暂时性地失败（不一定是我们
-  // 网址或代码的问题），失败的时候画面上会卡成一个高度是 0 的空白 iframe。
-  // 给它一点处理时间之后，如果还是空白的，就自动换成一个可以点过去 Instagram 原帖的连结，
-  // 不要让访客看到的是一个永远空白、什么都点不了的紫色方块。
-  setTimeout(() => {
-    document.querySelectorAll("#results-grid .review-embed").forEach(embedEl => {
-      const bq = embedEl.querySelector(".instagram-media, .instagram-media-registered");
-      if (!bq) return; // 没有连结的占位图示（🖼️）不用管
-      const iframe = embedEl.querySelector("iframe");
-      const failed = !iframe || iframe.offsetHeight <= 2;
-      if (failed) {
-        const link = bq.getAttribute("data-instgrm-permalink") || "";
-        if (link) {
-          embedEl.innerHTML = `<a class="ig-embed-fallback" href="${link}" target="_blank" rel="noopener">📎 点这里查看这则 Instagram 贴文 →</a>`;
+  // 保险措施：Instagram 那边的嵌入服务偶尔会对某几则贴文真的失败（例如连结格式不对），
+  // 失败的时候画面上会卡成一个高度是 0 的空白 iframe。但正常情况下，embed.js 载入
+  // + 跟 Instagram 服务器要资料 + 把 6 个嵌入都处理完，在正常网速下也可能要好几秒，
+  // 不能查一次没起来就马上判定失败（查太早、太快，会把「只是还在载入」的正常嵌入
+  // 也误判成失败、错误地换成连结，看起来像「全部都出不来」）。
+  // 所以分成 3 次、时间越拉越长地检查（6 秒 / 12 秒 / 20 秒），只有到最后一次
+  // 还是空白的，才真的判定这个嵌入失败、换成可以点过去 Instagram 原帖的连结；
+  // 前面几次如果还没起来，先继续等，不要动它。
+  function checkIgEmbedFallbacks(remainingDelays) {
+    if (!remainingDelays.length) return;
+    setTimeout(() => {
+      const isFinalCheck = remainingDelays.length === 1;
+      document.querySelectorAll("#results-grid .review-embed").forEach(embedEl => {
+        const bq = embedEl.querySelector(".instagram-media, .instagram-media-registered");
+        if (!bq) return; // 没有连结的占位图示（🖼️）不用管
+        const iframe = embedEl.querySelector("iframe");
+        const failed = !iframe || iframe.offsetHeight <= 2;
+        if (failed && isFinalCheck) {
+          const link = bq.getAttribute("data-instgrm-permalink") || "";
+          if (link) {
+            embedEl.innerHTML = `<a class="ig-embed-fallback" href="${link}" target="_blank" rel="noopener">📎 点这里查看这则 Instagram 贴文 →</a>`;
+          }
         }
-      }
-    });
-  }, 5000);
+      });
+      checkIgEmbedFallbacks(remainingDelays.slice(1));
+    }, remainingDelays[0]);
+  }
+  checkIgEmbedFallbacks([6000, 6000, 8000]); // 6 秒、12 秒、20 秒各查一次，最后一次才会真的换成连结
 
   // Incentive Trip 照片墙：内容照画（有没有照片都先把标题/网格准备好），
   // 是否显示整个板块的判断放在 applyLayout 之后（见下面），才不会被「网站排版」的隐藏设定盖掉判断。
