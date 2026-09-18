@@ -346,11 +346,11 @@
   .closing p.soft{font-weight:500;color:var(--ink-soft);font-size:16px;}
 
   /* ---------- Footer ---------- */
+  /* 拿掉 Logo/品牌简介/关于品牌之后，footer 现在只剩「联系我们」+「关注我们」两栏。 */
   footer{border-top:1px solid var(--card-border);padding:48px 0 40px;}
-  .footer-grid{display:grid;grid-template-columns:1fr;gap:32px;margin-top:28px;}
+  .footer-grid{display:grid;grid-template-columns:1fr;gap:32px;}
   footer h5{font-size:14px;margin:0 0 14px;color:var(--muted);}
   footer p, footer a{font-size:14.5px;color:var(--ink-soft);text-decoration:none;display:block;margin-bottom:10px;}
-  footer .desc{color:var(--muted);max-width:400px;}
 
   @media(min-width:720px){
     .founder-grid{grid-template-columns:1fr 1fr;align-items:center;}
@@ -359,7 +359,7 @@
     .highlights-list{flex:1;justify-content:center;gap:30px;}
     .gallery-grid{grid-template-columns:repeat(2,1fr);}
     .fit-grid{grid-template-columns:1fr 1fr;}
-    .footer-grid{grid-template-columns:1.4fr 1fr 1fr;}
+    .footer-grid{grid-template-columns:1fr 1fr;}
     .hero h1{font-size:46px;}
     .trip-gallery{grid-template-columns:repeat(3,1fr);}
     .countdown-card{padding:36px 28px;}
