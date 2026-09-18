@@ -180,24 +180,68 @@
     margin:20px 0;font-size:14px;color:var(--purple-dark);font-weight:700;
   }
 
-  /* ---------- GROW System ---------- */
+  /* ---------- GROW System：手风琴展开卡片 ---------- */
   .grow-header{text-align:center;margin-bottom:36px;}
-  .stage{margin-bottom:28px;}
-  .stage-label{
-    display:inline-flex;align-items:center;gap:8px;
-    background:var(--purple-light);color:var(--purple-dark);
-    font-weight:700;font-size:14px;
-    padding:6px 16px;border-radius:999px;margin-bottom:16px;
-  }
-  .stage-label small{font-weight:500;color:var(--muted);}
-  .module-grid{display:grid;grid-template-columns:1fr;gap:16px;}
-  .module-card{
-    background:#fff;border:1px solid var(--card-border);border-radius:16px;padding:20px 22px;
-  }
-  .module-card h4{margin:0 0 4px;font-size:16px;}
-  .module-card .tag{font-size:13px;color:var(--purple);font-weight:700;margin-bottom:6px;display:block;}
-  .module-card p{margin:0;color:var(--ink-soft);font-size:14.5px;}
   .grow-footnote{text-align:center;color:var(--muted);font-size:14.5px;margin-top:28px;}
+
+  /* 手机版（预设）：直向堆叠，一次展开一张，点其他色块切换 */
+  .accordion{display:flex;flex-direction:column;gap:10px;}
+  .panel{
+    position:relative;border-radius:18px;overflow:hidden;cursor:pointer;
+    color:#fff;padding:16px 18px;min-height:56px;
+    transition:background 0.3s ease;
+  }
+  .panel .stage-tag{
+    font-size:12px;font-weight:700;
+    background:rgba(255,255,255,0.22);padding:4px 12px;border-radius:999px;
+    display:inline-block;margin-bottom:0;
+  }
+  .panel .lock-badge{
+    position:absolute;top:16px;right:16px;background:rgba(28,23,48,0.35);
+    width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;
+  }
+  .panel .collapsed-label{font-size:14.5px;font-weight:700;margin-left:10px;}
+  .panel.expanded .collapsed-label{display:none;}
+  .panel-content{display:none;position:relative;z-index:1;margin-top:14px;}
+  .panel.expanded .panel-content{display:block;}
+  .panel-content .module{font-size:13px;opacity:0.85;margin:0 0 4px;font-weight:600;}
+  .panel-content h3{font-size:19px;margin:0 0 10px;font-weight:800;}
+  .panel-content .benefit-body{font-size:14px;line-height:1.75;opacity:0.97;}
+  .panel-content .benefit-body p{margin:0;}
+  .panel-icon{
+    width:88px;height:88px;object-fit:contain;margin-bottom:6px;
+    filter:drop-shadow(0 8px 14px rgba(0,0,0,0.22));
+  }
+  .panel.p4 .panel-icon,.panel.p5 .panel-icon{opacity:0.55;filter:grayscale(1) drop-shadow(0 8px 14px rgba(0,0,0,0.22));}
+  .coming-soon{
+    display:inline-block;margin-top:12px;font-size:11.5px;font-weight:700;letter-spacing:0.5px;
+    background:rgba(255,255,255,0.25);padding:4px 10px;border-radius:999px;
+  }
+  .panel.p1{background:linear-gradient(160deg,#c9a4f5 0%,#a366ec 100%);}
+  .panel.p2{background:linear-gradient(160deg,#a366ec 0%,#8b3ce8 100%);}
+  .panel.p3{background:linear-gradient(160deg,var(--purple) 0%,var(--purple-dark) 100%);}
+  .panel.p4,.panel.p5{background:linear-gradient(160deg,#c9c5d4 0%,#9b96ab 100%);}
+
+  /* 电脑版：横向手风琴，预设自动轮播 + 滑鼠移过去哪张就展开哪张 */
+  @media(min-width:720px){
+    .accordion{flex-direction:row;gap:10px;height:460px;}
+    .panel{
+      flex:1;padding:26px 22px;display:flex;flex-direction:column;justify-content:flex-end;
+      transition:flex 0.4s ease;
+    }
+    .panel.expanded{flex:4.2;}
+    .panel .stage-tag{position:absolute;top:22px;left:22px;}
+    .panel .lock-badge{top:22px;right:22px;}
+    .panel .collapsed-label{
+      position:absolute;left:50%;bottom:26px;transform:translateX(-50%);
+      writing-mode:vertical-rl;letter-spacing:3px;margin:0;font-size:15px;
+    }
+    .panel-content{margin-top:0;}
+    .panel-icon{width:130px;height:130px;position:absolute;top:14px;right:18px;margin-bottom:0;}
+    .panel-content .module{font-size:14px;}
+    .panel-content h3{font-size:22px;}
+    .panel-content .benefit-body{font-size:14.5px;max-width:320px;}
+  }
 
   /* ---------- Highlights ---------- */
   .highlight-grid{display:grid;grid-template-columns:1fr;gap:18px;}
@@ -291,7 +335,6 @@
 
   @media(min-width:720px){
     .founder-grid{grid-template-columns:1fr 1fr;align-items:center;}
-    .module-grid{grid-template-columns:repeat(2,1fr);}
     .highlight-grid{grid-template-columns:repeat(2,1fr);}
     .gallery-grid{grid-template-columns:repeat(2,1fr);}
     .fit-grid{grid-template-columns:1fr 1fr;}
