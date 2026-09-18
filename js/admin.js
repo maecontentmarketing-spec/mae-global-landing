@@ -426,6 +426,22 @@ function renderSection(key, data) {
     inner += TEXT_FIELDS[key].map(([f, label, type]) => textInput(f, label, type, data[key][f])).join("");
   }
 
+  if (key === "system") {
+    const stageLabels = ["阶段一", "阶段二", "阶段三", "阶段四", "阶段五"];
+    inner += (data.system.stages || []).map((s, i) => `
+      <div class="admin-field" style="border-top:1px solid var(--card-border);padding-top:12px;">
+        <label>${stageLabels[i] || `阶段 ${i + 1}`} · 模块名称</label>
+        <input type="text" data-field="_stages.${i}.module" value="${(s.module || "").replace(/"/g, "&quot;")}">
+        <label style="margin-top:10px;">${stageLabels[i] || `阶段 ${i + 1}`} · 标题</label>
+        <input type="text" data-field="_stages.${i}.title" value="${(s.title || "").replace(/"/g, "&quot;")}">
+        ${richTextField(`_stages.${i}.body`, `${stageLabels[i] || `阶段 ${i + 1}`} · 内容`, s.body)}
+        <label style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" data-field="_stages.${i}.locked" data-bool="1" ${s.locked ? "checked" : ""}>
+          显示为「未解锁 / Coming Soon」（卡片变灰阶 + 出现锁头，开放后取消勾选即可）
+        </label>
+      </div>`).join("");
+  }
+
   if (key === "event") {
     inner += sessionsField(data.event.sessions);
   }
@@ -621,6 +637,9 @@ async function saveSection(key) {
     } else if (path.startsWith("_items.")) {
       const [, idx, field] = path.split(".");
       updated.items[idx][field] = val;
+    } else if (path.startsWith("_stages.")) {
+      const [, idx, field] = path.split(".");
+      updated.stages[idx][field] = val;
     } else if (path.startsWith("_sessions.")) {
       const idx = Number(path.split(".")[1]);
       sessionsList[idx] = val;

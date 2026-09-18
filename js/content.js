@@ -30,7 +30,41 @@ const DEFAULT_CONTENT = {
   system: {
     title: "aMAEzing AI GROW System",
     subtitle: "一套让你从新人到领导者，持续成长的完整系统——不管你从哪一步开始，都有清楚的下一步。",
-    footnote: "这套系统不是要你一次学完五样东西，而是跟着阶段走：先启动，再成长，最后成为能带人的领导者。每一步，AI 都在帮你。"
+    footnote: "这套系统不是要你一次学完五样东西，而是跟着阶段走：先启动，再成长，最后成为能带人的领导者。每一步，AI 都在帮你。",
+    // 5 个阶段：module/title/body 都可以在后台「④ aMAEzing AI GROW System」编辑；
+    // locked 打勾会让这张卡片变灰阶 + 出现锁头 + 「Coming Soon」标签（阶段四、五还没开放时用）。
+    stages: [
+      {
+        module: "AI Mastermind",
+        title: "新人启动",
+        body: "今天的重点仅仅是「不迷路」。加入的头 30 天，我们把方向、心态、基本功一次讲清楚——每天知道该学什么、该做什么，不用自己一个人瞎摸索。走完这一步，你会带着清楚的方向感，进入下一阶段。",
+        locked: false
+      },
+      {
+        module: "AI AdsPro",
+        title: "广告增长",
+        body: "有了方向之后，下一步是「被看见」。不用请人、不用学复杂软件，AI AdsPro 手把手教你用 AI 直接做出能带来询问、带来客户的广告——从线上曝光带到线下成交，业绩自然往上走。",
+        locked: false
+      },
+      {
+        module: "AI Content Engine",
+        title: "内容引擎",
+        body: "广告带来流量之后，真正让人留下来的是内容。这一阶段教你用 AI 打造属于自己的内容风格，把个人品牌立起来——不再是你追着人跑，而是对的人主动被你吸引过来找你。",
+        locked: false
+      },
+      {
+        module: "AI ClosePro",
+        title: "招商成交",
+        body: "不靠话术压人，而是用对的方式建立信任，自然促成对方的加入——从「聊得来」走到「愿意一起做」，把兴趣谈成实际的结果。",
+        locked: true
+      },
+      {
+        module: "AI Leadership",
+        title: "团队领导",
+        body: "把一个人的能力，变成一个团队的能力——学会复制系统、培养他人，带出能传承下去的团队，让事业不再只靠自己一个人撑起来。",
+        locked: true
+      }
+    ]
   },
   highlights: [
     { emoji: "📱", title: "一部手机就能开始", desc: "不需要额外设备、不需要技术背景" },

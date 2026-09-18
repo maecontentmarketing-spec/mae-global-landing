@@ -169,6 +169,83 @@ async function renderAgentInviteCard() {
   }
 }
 
+// ============================================================
+// GROW System 手风琴：5 个阶段一次展开一张。
+// 预设「自动轮播」，电脑版滑鼠移过去哪张、手机版点哪张，就手动展开那张、
+// 同时永久停止自动轮播（用户已经自己在操作了，不用再帮他跳来跳去）。
+// 阶段四、五（content.js 的 locked:true）会变灰阶、加锁头 + Coming Soon 标签。
+// ============================================================
+const GROW_STAGE_META = [
+  { cls: "p1", tagText: "阶段一", icon: "rocket" },
+  { cls: "p2", tagText: "阶段二", icon: "megaphone" },
+  { cls: "p3", tagText: "阶段三", icon: "pencil" },
+  { cls: "p4", tagText: "阶段四", icon: "target" },
+  { cls: "p5", tagText: "阶段五", icon: "crown" }
+];
+let growStages = null;
+let growExpandedIndex = 0;
+let growAutoTimer = null;
+let growAutoStopped = false;
+
+function renderGrowAccordion(stages) {
+  const wrap = document.getElementById("grow-accordion");
+  if (!wrap || !Array.isArray(stages) || !stages.length) return;
+  growStages = stages;
+
+  wrap.innerHTML = stages.map((s, i) => {
+    const meta = GROW_STAGE_META[i] || GROW_STAGE_META[GROW_STAGE_META.length - 1];
+    const expanded = i === growExpandedIndex;
+    const lockBadge = s.locked ? `<div class="lock-badge">🔒</div>` : "";
+    let inner;
+    if (expanded) {
+      const soon = s.locked ? `<div class="coming-soon">Coming Soon</div>` : "";
+      inner = `
+        <img class="panel-icon" src="icons/${meta.icon}.png" alt="">
+        <div class="panel-content">
+          <div class="module">${s.module || ""}</div>
+          <h3>${s.title || ""}</h3>
+          <div class="benefit-body">${s.body || ""}</div>
+          ${soon}
+        </div>`;
+    } else {
+      inner = `<span class="collapsed-label">${s.module || ""}</span>`;
+    }
+    return `<div class="panel ${meta.cls}${expanded ? " expanded" : ""}" data-idx="${i}">
+      <span class="stage-tag">${meta.tagText}</span>
+      ${lockBadge}
+      ${inner}
+    </div>`;
+  }).join("");
+
+  wrap.querySelectorAll(".panel").forEach(panel => {
+    panel.addEventListener("click", () => setGrowExpanded(Number(panel.getAttribute("data-idx"))));
+  });
+  if (window.matchMedia("(hover:hover) and (pointer:fine)").matches) {
+    wrap.querySelectorAll(".panel").forEach(panel => {
+      panel.addEventListener("mouseenter", () => setGrowExpanded(Number(panel.getAttribute("data-idx"))));
+    });
+  }
+
+  startGrowAutoRotate();
+}
+
+// 用户自己点/hover 切换过一次之后，就不再自动跳，让他好好看内容。
+function setGrowExpanded(idx) {
+  if (idx === growExpandedIndex || !growStages) return;
+  growExpandedIndex = idx;
+  growAutoStopped = true;
+  if (growAutoTimer) { clearInterval(growAutoTimer); growAutoTimer = null; }
+  renderGrowAccordion(growStages);
+}
+
+function startGrowAutoRotate() {
+  if (growAutoTimer || growAutoStopped || !growStages || growStages.length < 2) return;
+  growAutoTimer = setInterval(() => {
+    growExpandedIndex = (growExpandedIndex + 1) % growStages.length;
+    renderGrowAccordion(growStages);
+  }, 3800);
+}
+
 function render(content) {
   const c = content;
 
@@ -202,6 +279,7 @@ function render(content) {
   setText("system-title", c.system.title);
   setRichText("system-subtitle", c.system.subtitle);
   setRichText("system-footnote", c.system.footnote);
+  renderGrowAccordion(c.system.stages);
 
   // Highlights
   const hg = document.getElementById("highlights-grid");
