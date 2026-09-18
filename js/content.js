@@ -129,6 +129,14 @@ const DEFAULT_CONTENT = {
     subtitle: "努力，值得被看见——这是属于 MAE 伙伴们的高光时刻。",
     images: []
   },
+  // TEAM BUILDING 照片墙：跟上面 incentive_trip 完全同一套「自由加/减照片」功能，
+  // 只是换了标题/位置（Amy 说想先复制一模一样的，之后自己在后台改标题/副标题/照片）。
+  // 一样是没有上传任何照片时，网站会自动把整个板块隐藏。
+  team_building: {
+    title: "TEAM BUILDING",
+    subtitle: "",
+    images: []
+  },
   faq: {
     good: [
       "想找一份能利用零碎时间经营、不影响正职的收入来源",
@@ -174,7 +182,7 @@ const DEFAULT_CONTENT = {
   // 网站板块的显示顺序 + 隐藏设定（后台「网站排版」可以拖拽调整）。
   // footer（页脚）固定放最后、header 固定放最前，不受这个排版控制。
   layout: {
-    order: ["hero", "kate", "opportunity", "system", "highlights", "brand", "milestones", "event", "results", "incentive_trip", "faq", "register", "closing"],
+    order: ["hero", "kate", "opportunity", "system", "highlights", "brand", "milestones", "event", "results", "incentive_trip", "team_building", "faq", "register", "closing"],
     hidden: []
   },
   // Email 模板：报名名单那边点「Email」按钮时可以挑一个模板，内容会自动带进 Gmail 编辑窗口。

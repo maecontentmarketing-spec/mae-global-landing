@@ -489,6 +489,15 @@ function render(content) {
   const tg = document.getElementById("incentive-trip-grid");
   if (tg) tg.innerHTML = tripImages.map(url => `<img src="${url}" alt="">`).join("");
 
+  // TEAM BUILDING 照片墙：跟上面 Incentive Trip 完全同一套逻辑（Amy 要求先原样复制，之后自己改内容）。
+  const teamBuildingImages = (c.team_building && Array.isArray(c.team_building.images))
+    ? c.team_building.images.filter(Boolean)
+    : [];
+  setText("team-building-title", c.team_building.title);
+  setRichText("team-building-subtitle", c.team_building.subtitle);
+  const tbg = document.getElementById("team-building-grid");
+  if (tbg) tbg.innerHTML = teamBuildingImages.map(url => `<img src="${url}" alt="">`).join("");
+
   // Audience fit + FAQ
   const good = document.getElementById("faq-good");
   good.innerHTML = c.faq.good.map(x => `<li>${x}</li>`).join("");
@@ -534,6 +543,17 @@ function render(content) {
     } else {
       const hiddenByLayout = !!(c.layout && Array.isArray(c.layout.hidden) && c.layout.hidden.includes("incentive_trip"));
       tripSection.hidden = hiddenByLayout;
+    }
+  }
+
+  // TEAM BUILDING 没有照片时强制隐藏整个板块，逻辑跟 Incentive Trip 一模一样。
+  const teamBuildingSection = document.querySelector('[data-section-key="team_building"]');
+  if (teamBuildingSection) {
+    if (!teamBuildingImages.length) {
+      teamBuildingSection.hidden = true;
+    } else {
+      const hiddenByLayout = !!(c.layout && Array.isArray(c.layout.hidden) && c.layout.hidden.includes("team_building"));
+      teamBuildingSection.hidden = hiddenByLayout;
     }
   }
 }

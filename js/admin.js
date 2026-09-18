@@ -12,6 +12,7 @@ const TEXT_FIELDS = {
   event: [["title", "标题", "text"], ["subtitle", "提示语", "textarea"], ["date", "日期", "text"], ["time", "时间", "text"], ["place", "地点", "text"], ["timezone", "时区", "text"]],
   results: [["title", "标题", "text"], ["warning", "警示文字", "textarea"]],
   incentive_trip: [["title", "标题", "text"], ["subtitle", "副标题", "textarea"]],
+  team_building: [["title", "标题", "text"], ["subtitle", "副标题", "textarea"]],
   register: [["p1", "段落 1", "textarea"], ["p2", "段落 2", "textarea"], ["button", "按钮文字", "text"]],
   closing: [["line1", "第一行", "text"], ["line2", "第二行", "text"]],
   footer: [["desc", "品牌简介", "textarea"], ["email", "联系邮箱", "text"], ["phone", "联系电话", "text"], ["address", "地址", "text"]]
@@ -182,6 +183,7 @@ const SECTION_LABELS = {
   hero: "① Hero 首屏", kate: "② Kate 创办人", opportunity: "③ 重新框定机会",
   system: "④ aMAEzing AI GROW System", highlights: "⑤ 四大亮点", brand: "⑥ MAE 品牌背书",
   milestones: "MAE Milestone 画廊", event: "⑦ 时间地点", results: "⑧ 真实成果", incentive_trip: "奖励旅游 Incentive Trip",
+  team_building: "TEAM BUILDING",
   faq: "⑨ 谁适合参与 + FAQ", register: "⑩ 报名区块文案", closing: "⑪ 结尾", footer: "页脚"
 };
 
@@ -541,6 +543,11 @@ function renderSection(key, data) {
     inner += `<p class="hint" style="margin-top:10px;">一张照片都还没上传的时候，网站上这个板块会自动隐藏，不会出现空板块。</p>`;
   }
 
+  if (key === "team_building") {
+    inner += dynamicImageListBlock("team", "team-images-list", data.team_building.images || []);
+    inner += `<p class="hint" style="margin-top:10px;">一张照片都还没上传的时候，网站上这个板块会自动隐藏，不会出现空板块。</p>`;
+  }
+
   if (key === "faq") {
     inner += `<div class="admin-field"><label>适合参与（每行一条）</label>
       <textarea data-field="_good" rows="7">${data.faq.good.join("\n")}</textarea></div>`;
@@ -602,7 +609,7 @@ function renderLayoutSection(data) {
 }
 
 function renderAllSections() {
-  const order = ["hero", "kate", "opportunity", "system", "highlights", "brand", "milestones", "event", "results", "incentive_trip", "faq", "register", "closing", "footer"];
+  const order = ["hero", "kate", "opportunity", "system", "highlights", "brand", "milestones", "event", "results", "incentive_trip", "team_building", "faq", "register", "closing", "footer"];
   document.getElementById("sections").innerHTML =
     renderLayoutSection(currentContent) + order.map(k => renderSection(k, currentContent)).join("");
 
@@ -770,6 +777,8 @@ async function saveSection(key) {
   // Incentive Trip 照片也是一个清单，先收集起来最后再一次覆盖，
   // 这样移除过某几张照片之后，才不会留下旧的空位。
   const tripImagesList = [];
+  // TEAM BUILDING 照片跟 Incentive Trip 用同一套收集逻辑，只是另外开一个清单。
+  const teamImagesList = [];
   // MAE 品牌背书的照片现在也改成清单了，跟 Incentive Trip 用同一套收集逻辑。
   const brandImagesList = [];
   // 「真实成果」见证清单：每一条有好几个栏位（姓名/身份、见证内容、IG 连结）要一起收集，
@@ -814,6 +823,9 @@ async function saveSection(key) {
     } else if (path.startsWith("_trip_img.")) {
       const idx = Number(path.split(".")[1]);
       tripImagesList[idx] = val;
+    } else if (path.startsWith("_team_img.")) {
+      const idx = Number(path.split(".")[1]);
+      teamImagesList[idx] = val;
     } else if (path.startsWith("_brand_img.")) {
       const idx = Number(path.split(".")[1]);
       brandImagesList[idx] = val;
@@ -836,6 +848,9 @@ async function saveSection(key) {
   }
   if (key === "incentive_trip") {
     updated.images = tripImagesList.filter(Boolean);
+  }
+  if (key === "team_building") {
+    updated.images = teamImagesList.filter(Boolean);
   }
   if (key === "brand") {
     updated.images = brandImagesList.filter(Boolean);
