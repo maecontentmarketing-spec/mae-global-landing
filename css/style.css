@@ -244,16 +244,23 @@
   }
 
   /* ---------- Highlights ---------- */
-  .highlight-grid{display:grid;grid-template-columns:1fr;gap:18px;}
-  .highlight-card{
-    background:#fff;border:1px solid var(--card-border);border-radius:20px;padding:26px;
+  /* ---------- 四大亮点：左边一张照片、右边 4 条「立体图示 + 标题 + 描述」 ---------- */
+  .highlights-flex{display:flex;flex-direction:column;gap:28px;}
+  .highlights-photo{
+    background:var(--purple-light);
+    border:1px dashed #d9bdf2;
+    border-radius:20px;
+    aspect-ratio:4/3;
+    display:flex;align-items:center;justify-content:center;
+    color:#a98fce;font-size:14px;text-align:center;
+    overflow:hidden;
   }
-  .emoji-badge{
-    width:52px;height:52px;border-radius:16px;background:var(--purple-light);
-    display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:14px;
-  }
-  .highlight-card h4{margin:0 0 8px;font-size:17px;}
-  .highlight-card p{margin:0;color:var(--ink-soft);font-size:14.5px;}
+  .highlights-photo img{width:100%;height:100%;object-fit:cover;}
+  .highlights-list{display:flex;flex-direction:column;gap:24px;}
+  .highlight-row{display:flex;align-items:flex-start;gap:16px;}
+  .highlight-row .highlight-icon{width:56px;height:56px;flex:none;}
+  .highlight-row .highlight-text h4{margin:0 0 6px;font-size:17px;}
+  .highlight-row .highlight-text p{margin:0;color:var(--ink-soft);font-size:14.5px;}
 
   /* ---------- Brand credibility ---------- */
   .brand-band{background:var(--navy);color:#fff;padding:56px 0;}
@@ -281,6 +288,8 @@
     background:linear-gradient(135deg,var(--purple) 0%,#a855f7 100%);
     color:#fff;border-radius:24px;padding:36px 28px;
   }
+  .event-poster{border-radius:18px;overflow:hidden;margin-bottom:22px;}
+  .event-poster img{width:100%;display:block;max-height:340px;object-fit:cover;}
   .event-card .section-title,.event-card .section-sub{color:#fff;}
   .event-card .section-sub{color:#ecd9ff;}
   .event-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
@@ -345,7 +354,9 @@
 
   @media(min-width:720px){
     .founder-grid{grid-template-columns:1fr 1fr;align-items:center;}
-    .highlight-grid{grid-template-columns:repeat(2,1fr);}
+    .highlights-flex{flex-direction:row;align-items:stretch;gap:44px;}
+    .highlights-photo{flex:0 0 42%;aspect-ratio:auto;}
+    .highlights-list{flex:1;justify-content:center;gap:30px;}
     .gallery-grid{grid-template-columns:repeat(2,1fr);}
     .fit-grid{grid-template-columns:1fr 1fr;}
     .footer-grid{grid-template-columns:1.4fr 1fr 1fr;}
