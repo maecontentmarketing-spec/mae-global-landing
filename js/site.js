@@ -66,6 +66,21 @@ function migrateBrandImages(brand) {
   return [brand.logo_image, brand.product_image, brand.cert_image].filter(Boolean);
 }
 
+// 四大亮点改版前，Supabase 存的是旧格式（整个板块直接是一个 [{emoji,title,desc}, ...] 清单）。
+// 改版后变成 {photo, items:[{icon,title,desc}, ...]}，格式不一样了，所以旧资料读回来的时候
+// 要先转换一次：emoji 换成对应的新版立体图示档名，文字（标题/描述）保留，照片留空（旧资料本来就没有照片）。
+const HIGHLIGHT_EMOJI_TO_ICON = { "📱": "phone", "🕐": "clock", "🏆": "trophy", "🌏": "globe" };
+function migrateHighlights(rawArray) {
+  return {
+    photo: "",
+    items: (rawArray || []).map(h => ({
+      icon: HIGHLIGHT_EMOJI_TO_ICON[h.emoji] || "rocket",
+      title: h.title || "",
+      desc: h.desc || ""
+    }))
+  };
+}
+
 // 倒数计时：从 event.sessions 这个日期时间清单里，挑「还没开始、离现在最近」的一场，
 // 每 30 秒更新一次「还剩 X 天 X 小时 X 分钟」。全部当作马来西亚/新加坡（GMT+8）时间处理。
 let countdownTimer = null;
@@ -309,13 +324,17 @@ function render(content) {
   setRichText("system-footnote", c.system.footnote);
   renderGrowAccordion(c.system.stages);
 
-  // Highlights
+  // Highlights：左边一张照片（可以不上传，维持占位提示），右边 4 条「立体图示 + 标题 + 描述」
+  setMedia("highlights-photo", c.highlights.photo);
   const hg = document.getElementById("highlights-grid");
-  hg.innerHTML = (Array.isArray(c.highlights) ? c.highlights : DEFAULT_CONTENT.highlights).map(h => `
-    <div class="highlight-card">
-      <div class="emoji-badge">${h.emoji}</div>
-      <h4>${h.title}</h4>
-      <p>${h.desc}</p>
+  const highlightItems = (c.highlights.items && c.highlights.items.length) ? c.highlights.items : DEFAULT_CONTENT.highlights.items;
+  hg.innerHTML = highlightItems.map(h => `
+    <div class="highlight-row">
+      <img class="highlight-icon" src="icons/${h.icon || "rocket"}.png" alt="">
+      <div class="highlight-text">
+        <h4>${h.title}</h4>
+        <p>${h.desc}</p>
+      </div>
     </div>`).join("");
 
   // Brand credibility
@@ -354,6 +373,16 @@ function render(content) {
   }).join("");
 
   // Event
+  const eventPosterEl = document.getElementById("event-poster");
+  if (eventPosterEl) {
+    if (c.event.poster_image) {
+      eventPosterEl.innerHTML = `<img src="${c.event.poster_image}" alt="">`;
+      eventPosterEl.hidden = false;
+    } else {
+      eventPosterEl.innerHTML = "";
+      eventPosterEl.hidden = true;
+    }
+  }
   setText("event-title", c.event.title);
   setRichText("event-subtitle", c.event.subtitle);
   setText("event-date", c.event.date);
@@ -499,6 +528,9 @@ async function loadContent() {
     if (data && data.length) {
       data.forEach(row => {
         if (merged[row.id] === undefined) return;
+        if (row.id === "highlights" && Array.isArray(row.content)) {
+          row.content = migrateHighlights(row.content);
+        }
         if (Array.isArray(merged[row.id])) {
           // 像「四大亮点」这种整个板块本身就是清单（不是清单包在物件里）的，
           // 要整个清单直接替换，不能用 Object.assign 合并——

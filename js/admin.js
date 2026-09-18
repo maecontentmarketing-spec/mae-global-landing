@@ -185,6 +185,19 @@ const SECTION_LABELS = {
   faq: "⑨ 谁适合参与 + FAQ", register: "⑩ 报名区块文案", closing: "⑪ 结尾", footer: "页脚"
 };
 
+// 四大亮点右边配的立体图示，都是同一套风格（跟 aMAEzing AI GROW System 手风琴那 5 个一样）。
+const HIGHLIGHT_ICON_OPTIONS = [
+  { value: "phone", label: "📱 手机" },
+  { value: "clock", label: "🕐 时钟" },
+  { value: "trophy", label: "🏆 奖杯" },
+  { value: "globe", label: "🌏 地球" },
+  { value: "rocket", label: "🚀 火箭" },
+  { value: "megaphone", label: "📣 扩音器" },
+  { value: "pencil", label: "✏️ 铅笔" },
+  { value: "target", label: "🎯 靶心" },
+  { value: "crown", label: "👑 皇冠" }
+];
+
 let currentContent = null; // 合并 Supabase 覆盖后的完整内容（跟 site.js 逻辑一致）
 
 function textInput(id, label, type, value) {
@@ -488,6 +501,7 @@ function renderSection(key, data) {
   }
 
   if (key === "event") {
+    inner += imageField("poster_image", "Zoom 分享会海报 banner（选填，建议宽图，例如 1200×675px；不上传的话这个板块维持原本纯文字卡片，不会空一块）", data.event.poster_image);
     inner += sessionsField(data.event.sessions);
   }
   if (key === "register") {
@@ -495,11 +509,16 @@ function renderSection(key, data) {
   }
 
   if (key === "highlights") {
-    inner += data.highlights.map((h, i) => `
+    inner += imageField("photo", "左边照片（建议直图，例如 Kate 或团队照片）", data.highlights.photo);
+    inner += `<p class="hint">下面 4 条右边配的立体图示，先在下拉选单挑一个（都是跟 aMAEzing AI GROW System 手风琴同一套风格）：</p>`;
+    inner += (data.highlights.items || []).map((h, i) => `
       <div class="admin-field" style="border-top:1px solid var(--card-border);padding-top:12px;">
-        <label>Emoji</label><input type="text" data-field="_arr.${i}.emoji" value="${h.emoji}">
-        <label style="margin-top:10px;">标题</label><input type="text" data-field="_arr.${i}.title" value="${h.title.replace(/"/g, "&quot;")}">
-        ${richTextField(`_arr.${i}.desc`, "描述", h.desc)}
+        <label>图示</label>
+        <select data-field="_hl_item.${i}.icon">
+          ${HIGHLIGHT_ICON_OPTIONS.map(opt => `<option value="${opt.value}" ${h.icon === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
+        </select>
+        <label style="margin-top:10px;">标题</label><input type="text" data-field="_hl_item.${i}.title" value="${(h.title || "").replace(/"/g, "&quot;")}">
+        ${richTextField(`_hl_item.${i}.desc`, "描述", h.desc)}
       </div>`).join("");
   }
 
@@ -699,11 +718,29 @@ function renderAllSections() {
   });
 }
 
+// 四大亮点改版前，Supabase 存的是旧格式（整个板块直接是一个 [{emoji,title,desc}, ...] 清单）。
+// 改版后变成 {photo, items:[{icon,title,desc}, ...]}，读回来的时候要先转换一次：
+// emoji 换成对应的新版立体图示档名，文字（标题/描述）保留，照片留空（旧资料本来就没有照片）。
+const HIGHLIGHT_EMOJI_TO_ICON = { "📱": "phone", "🕐": "clock", "🏆": "trophy", "🌏": "globe" };
+function migrateHighlights(rawArray) {
+  return {
+    photo: "",
+    items: (rawArray || []).map(h => ({
+      icon: HIGHLIGHT_EMOJI_TO_ICON[h.emoji] || "rocket",
+      title: h.title || "",
+      desc: h.desc || ""
+    }))
+  };
+}
+
 async function loadMergedContent() {
   const merged = JSON.parse(JSON.stringify(DEFAULT_CONTENT));
   const { data, error } = await supabaseClient.from("page_content").select("id, content");
   if (!error && data) {
     data.forEach(row => {
+      if (row.id === "highlights" && Array.isArray(row.content)) {
+        row.content = migrateHighlights(row.content);
+      }
       if (merged[row.id] !== undefined) {
         if (Array.isArray(merged[row.id])) {
           Object.assign(merged[row.id], row.content);
@@ -755,6 +792,10 @@ async function saveSection(key) {
     if (path.startsWith("_arr.")) {
       const [, idx, field] = path.split(".");
       updated[idx][field] = val;
+    } else if (path.startsWith("_hl_item.")) {
+      const [, idx, field] = path.split(".");
+      if (!updated.items[idx]) updated.items[idx] = {};
+      updated.items[idx][field] = val;
     } else if (path === "_captions") {
       updated.captions = val.split("\n");
     } else if (path.startsWith("_milestone_img.")) {
