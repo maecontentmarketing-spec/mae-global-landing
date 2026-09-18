@@ -11,6 +11,7 @@ const TEXT_FIELDS = {
   milestones: [["title", "标题", "text"], ["subtitle", "副标题", "textarea"]],
   event: [["title", "标题", "text"], ["subtitle", "提示语", "textarea"], ["date", "日期", "text"], ["time", "时间", "text"], ["place", "地点", "text"], ["timezone", "时区", "text"]],
   results: [["title", "标题", "text"], ["warning", "警示文字", "textarea"]],
+  incentive_trip: [["title", "标题", "text"], ["subtitle", "副标题", "textarea"]],
   register: [["p1", "段落 1", "textarea"], ["p2", "段落 2", "textarea"], ["button", "按钮文字", "text"]],
   closing: [["line1", "第一行", "text"], ["line2", "第二行", "text"]],
   footer: [["desc", "品牌简介", "textarea"], ["email", "联系邮箱", "text"], ["phone", "联系电话", "text"], ["address", "地址", "text"]]
@@ -180,7 +181,7 @@ async function createAgentLink() {
 const SECTION_LABELS = {
   hero: "① Hero 首屏", kate: "② Kate 创办人", opportunity: "③ 重新框定机会",
   system: "④ aMAEzing AI GROW System", highlights: "⑤ 四大亮点", brand: "⑥ MAE 品牌背书",
-  milestones: "MAE Milestone 画廊", event: "⑦ 时间地点", results: "⑧ 真实成果",
+  milestones: "MAE Milestone 画廊", event: "⑦ 时间地点", results: "⑧ 真实成果", incentive_trip: "奖励旅游 Incentive Trip",
   faq: "⑨ 谁适合参与 + FAQ", register: "⑩ 报名区块文案", closing: "⑪ 结尾", footer: "页脚"
 };
 
@@ -380,6 +381,15 @@ function sessionsField(sessions) {
     </div>`;
 }
 
+// Incentive Trip 照片墙：跟 sessionsField 一样，用「+ 加一张照片 / 移除」直接操作画面上的元素，
+// 不会重新整个板块，才不会把你还没保存的其他文字栏位盖掉。每一张照片都是一个 imageField，
+// 只是栏位路径用 _trip_img.N，保存的时候 saveSection 会把它们收集成一个清单存回 images 阵列。
+function incentiveTripImageField(idx, url) {
+  const field = imageField(`_trip_img.${idx}`, `照片 ${idx + 1}`, url);
+  // 在 imageField 外面包一层，加上「移除这张」按钮
+  return `<div class="trip-img-row" data-trip-idx="${idx}">${field}<button type="button" class="link-btn remove-trip-image">移除这张</button></div>`;
+}
+
 async function handleImageUpload(inputEl) {
   const file = inputEl.files[0];
   if (!file) return;
@@ -476,6 +486,13 @@ function renderSection(key, data) {
       </div>`).join("");
   }
 
+  if (key === "incentive_trip") {
+    const images = data.incentive_trip.images || [];
+    inner += `<div id="trip-images-list">${images.map((url, i) => incentiveTripImageField(i, url)).join("")}</div>`;
+    inner += `<button type="button" class="link-btn" id="add-trip-image-btn">+ 加一张照片</button>`;
+    inner += `<p class="hint" style="margin-top:10px;">一张照片都还没上传的时候，网站上这个板块会自动隐藏，不会出现空板块。</p>`;
+  }
+
   if (key === "faq") {
     inner += `<div class="admin-field"><label>适合参与（每行一条）</label>
       <textarea data-field="_good" rows="7">${data.faq.good.join("\n")}</textarea></div>`;
@@ -517,16 +534,12 @@ function renderLayoutSection(data) {
 }
 
 function renderAllSections() {
-  const order = ["hero", "kate", "opportunity", "system", "highlights", "brand", "milestones", "event", "results", "faq", "register", "closing", "footer"];
+  const order = ["hero", "kate", "opportunity", "system", "highlights", "brand", "milestones", "event", "results", "incentive_trip", "faq", "register", "closing", "footer"];
   document.getElementById("sections").innerHTML =
     renderLayoutSection(currentContent) + order.map(k => renderSection(k, currentContent)).join("");
 
   document.querySelectorAll("[data-save]").forEach(btn => {
     btn.addEventListener("click", () => saveSection(btn.getAttribute("data-save")));
-  });
-
-  document.querySelectorAll(".img-file-input").forEach(input => {
-    input.addEventListener("change", () => handleImageUpload(input));
   });
 
   const layoutList = document.getElementById("layout-list");
@@ -540,6 +553,15 @@ function renderAllSections() {
   const sectionsEl = document.getElementById("sections");
   sectionsEl.addEventListener("mousedown", (e) => {
     if (e.target.closest(".rt-btn")) e.preventDefault();
+  });
+
+  // 图片上传的 change 事件改用事件委派（不是渲染当下一个个绑定），
+  // 这样「Incentive Trip」用「+ 加一张照片」动态加出来的新档案输入框，
+  // 不用整个板块重新渲染，也能正常触发上传。
+  sectionsEl.addEventListener("change", (e) => {
+    if (e.target.classList.contains("img-file-input")) {
+      handleImageUpload(e.target);
+    }
   });
 
   // Zoom 场次「+ 加一场 / 移除」用事件委派处理，直接操作画面元素，
@@ -577,6 +599,27 @@ function renderAllSections() {
         inp.setAttribute("data-field", `_sessions.${i}`);
       });
     }
+    // Incentive Trip「+ 加一张照片」：加一个空的照片上传栏位，不用整个板块重新渲染。
+    if (e.target.id === "add-trip-image-btn") {
+      const list = document.getElementById("trip-images-list");
+      const idx = list.children.length;
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = incentiveTripImageField(idx, "");
+      list.appendChild(wrapper.firstElementChild);
+    }
+    // Incentive Trip「移除这张」：移除这一张照片栏位，并把后面栏位的 data-field 编号往前挪，
+    // 保存的时候才会照正确顺序收集成一个没有空位的 images 清单。
+    if (e.target.classList.contains("remove-trip-image")) {
+      const list = e.target.closest("#trip-images-list");
+      e.target.closest(".trip-img-row").remove();
+      list.querySelectorAll(".trip-img-row").forEach((row, i) => {
+        row.setAttribute("data-trip-idx", i);
+        const hidden = row.querySelector('input[type="hidden"]');
+        if (hidden) hidden.setAttribute("data-field", `_trip_img.${i}`);
+        const label = row.querySelector(".admin-field > label");
+        if (label) label.textContent = `照片 ${i + 1}`;
+      });
+    }
   });
 }
 
@@ -611,6 +654,9 @@ async function saveSection(key) {
   // Zoom 场次是一个清单，先收集起来最后再一次覆盖，
   // 这样删除过某几场之后，才不会留下旧的空位。
   const sessionsList = [];
+  // Incentive Trip 照片也是一个清单，先收集起来最后再一次覆盖，
+  // 这样移除过某几张照片之后，才不会留下旧的空位。
+  const tripImagesList = [];
 
   card.querySelectorAll("[data-field]").forEach(el => {
     const path = el.getAttribute("data-field");
@@ -643,6 +689,9 @@ async function saveSection(key) {
     } else if (path.startsWith("_sessions.")) {
       const idx = Number(path.split(".")[1]);
       sessionsList[idx] = val;
+    } else if (path.startsWith("_trip_img.")) {
+      const idx = Number(path.split(".")[1]);
+      tripImagesList[idx] = val;
     } else if (path === "_good") {
       updated.good = val.split("\n");
     } else if (path === "_bad") {
@@ -654,6 +703,9 @@ async function saveSection(key) {
 
   if (key === "event") {
     updated.sessions = sessionsList.filter(Boolean);
+  }
+  if (key === "incentive_trip") {
+    updated.images = tripImagesList.filter(Boolean);
   }
 
   currentContent[key] = updated;

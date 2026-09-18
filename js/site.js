@@ -350,6 +350,16 @@ function render(content) {
     </div>`;
   }).join("");
 
+  // Incentive Trip 照片墙：内容照画（有没有照片都先把标题/网格准备好），
+  // 是否显示整个板块的判断放在 applyLayout 之后（见下面），才不会被「网站排版」的隐藏设定盖掉判断。
+  const tripImages = (c.incentive_trip && Array.isArray(c.incentive_trip.images))
+    ? c.incentive_trip.images.filter(Boolean)
+    : [];
+  setText("incentive-trip-title", c.incentive_trip.title);
+  setRichText("incentive-trip-subtitle", c.incentive_trip.subtitle);
+  const tg = document.getElementById("incentive-trip-grid");
+  if (tg) tg.innerHTML = tripImages.map(url => `<img src="${url}" alt="">`).join("");
+
   // Audience fit + FAQ
   const good = document.getElementById("faq-good");
   good.innerHTML = c.faq.good.map(x => `<li>${x}</li>`).join("");
@@ -380,6 +390,14 @@ function render(content) {
 
   // 板块排版（顺序 + 隐藏），放最后确保这时候所有板块都已经存在
   applyLayout(c.layout);
+
+  // Incentive Trip 没有照片时强制隐藏整个板块——放在 applyLayout 之后，
+  // 这样不管后台「网站排版」有没有勾选隐藏 incentive_trip，只要还没上传照片就一定不显示；
+  // 后台一旦上传了照片，板块的显示与否才交回「网站排版」的隐藏设定控制。
+  if (!tripImages.length) {
+    const tripSection = document.querySelector('[data-section-key="incentive_trip"]');
+    if (tripSection) tripSection.hidden = true;
+  }
 }
 
 async function loadContent() {

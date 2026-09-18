@@ -110,6 +110,13 @@ const DEFAULT_CONTENT = {
       { who: "化妆师（Makeup Artist）", image: "", ig_link: "", quote: "本来就在美容行业工作，对产品和美感比较有 sense。加入 MAE 之后，不只是多一个可以推荐给客户的选择，自己也透过系统学会怎么把专业变成更完整的一份事业。" }
     ]
   },
+  // Incentive Trip 照片墙：只是一组照片（没有文字见证），没有上传任何照片时，
+  // 网站会自动把整个板块隐藏，等后台上传第一张照片才会出现。
+  incentive_trip: {
+    title: "奖励旅游 Incentive Trip",
+    subtitle: "努力，值得被看见——这是属于 MAE 伙伴们的高光时刻。",
+    images: []
+  },
   faq: {
     good: [
       "想找一份能利用零碎时间经营、不影响正职的收入来源",
@@ -155,7 +162,7 @@ const DEFAULT_CONTENT = {
   // 网站板块的显示顺序 + 隐藏设定（后台「网站排版」可以拖拽调整）。
   // footer（页脚）固定放最后、header 固定放最前，不受这个排版控制。
   layout: {
-    order: ["hero", "kate", "opportunity", "system", "highlights", "brand", "milestones", "event", "results", "faq", "register", "closing"],
+    order: ["hero", "kate", "opportunity", "system", "highlights", "brand", "milestones", "event", "results", "incentive_trip", "faq", "register", "closing"],
     hidden: []
   },
   // Email 模板：报名名单那边点「Email」按钮时可以挑一个模板，内容会自动带进 Gmail 编辑窗口。
