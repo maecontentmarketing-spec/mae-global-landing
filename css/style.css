@@ -417,6 +417,7 @@
 .admin-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
 .admin-topbar .who{font-size:13.5px;color:var(--muted);}
 .link-btn{background:none;border:none;color:var(--purple);font-weight:700;cursor:pointer;font-size:13.5px;padding:0;}
+.link-btn.danger{color:#dc2626;}
 .status-pill{font-size:12.5px;padding:3px 10px;border-radius:999px;background:var(--purple-light);color:var(--purple-dark);margin-left:8px;}
 .leads-table{width:100%;border-collapse:collapse;font-size:13.5px;}
 .leads-table th,.leads-table td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--card-border);}
