@@ -904,7 +904,7 @@ async function loadLeads() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="11">读取失败：${error.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12">读取失败：${error.message}</td></tr>`;
     return;
   }
   lastLeadsRows = data || [];
@@ -939,8 +939,9 @@ function renderLeadsTable() {
       <td>${remarkInputHtml(r.id, r.remark)}</td>
       <td>${remindedCheckboxHtml(r.id, r.reminded)}</td>
       <td>${emailButtonHtml(i)}</td>
+      <td>${deleteButtonHtml(r.id)}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="11">${onlyUnreminded && onlyUnreminded.checked ? "都已经提醒过了，没有还没提醒的人" : "暂时没有报名资料"}</td></tr>`;
+  }).join("") || `<tr><td colspan="12">${onlyUnreminded && onlyUnreminded.checked ? "都已经提醒过了，没有还没提醒的人" : "暂时没有报名资料"}</td></tr>`;
 
   document.querySelectorAll(".email-open-btn").forEach(btn => {
     btn.addEventListener("click", () => openGmailForLead(Number(btn.getAttribute("data-idx"))));
@@ -952,6 +953,10 @@ function renderLeadsTable() {
 
   document.querySelectorAll(".reminded-checkbox").forEach(cb => {
     cb.addEventListener("change", () => saveReminded(cb));
+  });
+
+  document.querySelectorAll(".delete-lead-btn").forEach(btn => {
+    btn.addEventListener("click", () => deleteLead(btn.getAttribute("data-id")));
   });
 }
 
@@ -1045,6 +1050,29 @@ function openGmailForLead(idx) {
   const body = (tpl.body || "").replace(/\{\{name\}\}/g, name).replace(/\{\{agent_name\}\}/g, agentName);
   const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(row.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.open(url, "_blank");
+}
+
+// 每一行报名资料最后的「删除」按钮：例如代理商用错连结报名，Amy 要求删掉这笔、
+// 让对方再用正确的连结报名一次。删除前一定要跳出确认框（带上姓名/电话方便核对是不是删对人），
+// 不小心点到也不会直接删掉。
+function deleteButtonHtml(id) {
+  return `<button type="button" class="link-btn danger delete-lead-btn" data-id="${id}">删除</button>`;
+}
+
+async function deleteLead(id) {
+  const row = lastLeadsRows.find(r => r.id === id);
+  const label = row ? `${row.name || "(无姓名)"} / ${row.phone || "(无电话)"}` : id;
+  if (!confirm(`确定要删除这笔报名资料吗？\n\n${label}\n\n删除后无法恢复。`)) return;
+
+  const { error } = await supabaseClient.from("registrations").delete().eq("id", id);
+  if (error) {
+    alert("删除失败：" + error.message);
+    return;
+  }
+  lastLeadsRows = lastLeadsRows.filter(r => r.id !== id);
+  renderLeadsTable();
+  updateNextSessionHint();
+  loadOverview(lastLeadsRows);
 }
 
 // 报名数据 Overview：总人数 + 按天趋势（最近 14 天）+ 每个代理带来几人。
