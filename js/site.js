@@ -23,6 +23,140 @@ const AGENT_CODE = getUrlParam("ref", { upper: true, maxLen: 40 });
 const UTM_SOURCE = getUrlParam("utm_source");
 const UTM_MEDIUM = getUrlParam("utm_medium");
 
+// ============================================================
+// 简/EN 语言切换：
+// - 中文版内容一律来自 Supabase（跟以前一样，admin 后台改了就会更新）。
+// - 英文版是「静态覆盖」：用 content-en.js 里 Amy 确认过的英文文案，
+//   盖在中文内容上面显示；图片/连结/日期这些不分语言的栏位维持不变。
+// - 之后如果在後台改了中文文案，英文版不会自动跟着变，需要另外更新
+//   content-en.js（这是 Amy 已经同意的取舍，換来不用维护两套後台）。
+// 选择的语言存在 localStorage，下次再开网站会记得。
+// ============================================================
+const LANG_KEY = "mae_lang";
+let currentLang = "zh";
+try {
+  currentLang = localStorage.getItem(LANG_KEY) === "en" ? "en" : "zh";
+} catch (e) { /* 无痕模式等读不到 localStorage 时，预设中文 */ }
+
+const DOC_TITLE_ZH = document.title;
+
+// 把英文覆盖层（EN_CONTENT）盖在中文内容（merged）上面，产生「这次要显示」的内容物件。
+// 只有 EN_CONTENT 里真的有写的栏位才会被换成英文，其他栏位（图片、连结、日期、
+// 还没翻译的栏位）都维持原本的值——这样就算翻译还没覆盖到某个栏位，也不会显示空白。
+function buildDisplayContent(merged) {
+  if (currentLang !== "en" || typeof EN_CONTENT === "undefined") return merged;
+  const c = JSON.parse(JSON.stringify(merged));
+  const ov = EN_CONTENT;
+
+  const mergeFields = (target, source) => {
+    if (!target || !source) return;
+    Object.keys(source).forEach(k => {
+      if (source[k] !== undefined && source[k] !== "") target[k] = source[k];
+    });
+  };
+
+  mergeFields(c.hero, ov.hero);
+  mergeFields(c.kate, ov.kate);
+  mergeFields(c.opportunity, ov.opportunity);
+  if (ov.system) {
+    if (ov.system.subtitle) c.system.subtitle = ov.system.subtitle;
+    if (ov.system.footnote) c.system.footnote = ov.system.footnote;
+    if (ov.system.stages && Array.isArray(c.system.stages)) {
+      c.system.stages = c.system.stages.map((s, i) => {
+        const t = ov.system.stages[i];
+        return t ? Object.assign({}, s, { title: t.title || s.title, body: t.body || s.body }) : s;
+      });
+    }
+  }
+  if (ov.highlights && ov.highlights.items && Array.isArray(c.highlights.items)) {
+    c.highlights.items = c.highlights.items.map((h, i) => {
+      const t = ov.highlights.items[i];
+      return t ? Object.assign({}, h, { title: t.title || h.title, desc: t.desc || h.desc }) : h;
+    });
+  }
+  mergeFields(c.brand, ov.brand);
+  mergeFields(c.milestones, ov.milestones);
+  mergeFields(c.event, ov.event);
+  if (ov.results) {
+    if (ov.results.title) c.results.title = ov.results.title;
+    if (ov.results.items && Array.isArray(c.results.items)) {
+      c.results.items = c.results.items.map((r, i) => {
+        const t = ov.results.items[i];
+        return t ? Object.assign({}, r, { who: t.who || r.who, quote: t.quote || r.quote }) : r;
+      });
+    }
+  }
+  mergeFields(c.incentive_trip, ov.incentive_trip);
+  mergeFields(c.team_building, ov.team_building);
+  if (ov.faq) {
+    if (ov.faq.good) c.faq.good = ov.faq.good;
+    if (ov.faq.bad) c.faq.bad = ov.faq.bad;
+    if (ov.faq.items && Array.isArray(c.faq.items)) {
+      c.faq.items = c.faq.items.map((f, i) => {
+        const t = ov.faq.items[i];
+        return t ? { q: t.q || f.q, a: t.a || f.a } : f;
+      });
+    }
+  }
+  mergeFields(c.register, ov.register);
+
+  return c;
+}
+
+// 网站上不是从 Supabase 画出来的固定文字（按钮、栏位标签、表单讯息...），
+// 切换语言的时候要连这些一起换，不然会变成「一半中文一半英文」。
+function applyStaticI18n() {
+  const U = (typeof UI_STRINGS_EN !== "undefined") ? UI_STRINGS_EN : {};
+
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if (!el.hasAttribute("data-zh-text")) el.setAttribute("data-zh-text", el.textContent);
+    el.textContent = (currentLang === "en" && U[key]) ? U[key] : el.getAttribute("data-zh-text");
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    const zh = el.getAttribute("data-placeholder") || "";
+    const en = U[key] || zh;
+    el.setAttribute("data-placeholder-active", currentLang === "en" ? en : zh);
+    // 目前还没上传照片、还在显示占位文字的话，占位文字也要马上跟着换语言
+    if (!el.querySelector("img")) el.textContent = currentLang === "en" ? en : zh;
+  });
+
+  const heroNote = document.getElementById("hero-lang-note");
+  if (heroNote) {
+    if (currentLang === "en" && U.hero_lang_note) {
+      heroNote.textContent = U.hero_lang_note;
+      heroNote.hidden = false;
+    } else {
+      heroNote.hidden = true;
+    }
+  }
+
+  document.title = (currentLang === "en" && U.doc_title) ? U.doc_title : DOC_TITLE_ZH;
+  document.documentElement.lang = currentLang === "en" ? "en" : "zh-Hans";
+}
+
+function setLang(lang) {
+  currentLang = (lang === "en") ? "en" : "zh";
+  try { localStorage.setItem(LANG_KEY, currentLang); } catch (e) { /* 忽略存不了的情况 */ }
+
+  document.querySelectorAll(".lang-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-lang") === currentLang);
+  });
+
+  applyStaticI18n();
+  if (lastMergedContent) render(lastMergedContent);
+}
+
+function initLangSwitch() {
+  document.querySelectorAll(".lang-btn").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-lang") === currentLang);
+    b.addEventListener("click", () => setLang(b.getAttribute("data-lang")));
+  });
+  applyStaticI18n();
+}
+
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el && value !== undefined && value !== null) el.textContent = value;
@@ -67,7 +201,7 @@ function setMedia(id, url) {
   if (url) {
     el.innerHTML = `<img src="${url}" alt="">`;
   } else {
-    const placeholder = el.getAttribute("data-placeholder") || "";
+    const placeholder = el.getAttribute("data-placeholder-active") || el.getAttribute("data-placeholder") || "";
     el.textContent = placeholder;
   }
 }
@@ -117,17 +251,19 @@ function renderCountdown(sessions) {
   }
 
   const target = upcoming[0];
+  const U = (typeof UI_STRINGS_EN !== "undefined") ? UI_STRINGS_EN : {};
+  const en = currentLang === "en";
   el.hidden = false;
   el.innerHTML = `
-    <div class="countdown-label">⏰ 距离最近一场分享会还有</div>
+    <div class="countdown-label">${en ? (U.countdown_label || "⏰ Next session starts in") : "⏰ 距离最近一场分享会还有"}</div>
     <div class="countdown-boxes">
-      <div class="countdown-box"><div class="countdown-num" id="cd-days">00</div><div class="countdown-unit">天 DAYS</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-days">00</div><div class="countdown-unit">${en ? (U.countdown_days || "DAYS") : "天 DAYS"}</div></div>
       <div class="countdown-sep">:</div>
-      <div class="countdown-box"><div class="countdown-num" id="cd-hours">00</div><div class="countdown-unit">时 HRS</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-hours">00</div><div class="countdown-unit">${en ? (U.countdown_hours || "HRS") : "时 HRS"}</div></div>
       <div class="countdown-sep">:</div>
-      <div class="countdown-box"><div class="countdown-num" id="cd-mins">00</div><div class="countdown-unit">分 MIN</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-mins">00</div><div class="countdown-unit">${en ? (U.countdown_mins || "MIN") : "分 MIN"}</div></div>
       <div class="countdown-sep">:</div>
-      <div class="countdown-box"><div class="countdown-num" id="cd-secs">00</div><div class="countdown-unit">秒 SEC</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-secs">00</div><div class="countdown-unit">${en ? (U.countdown_secs || "SEC") : "秒 SEC"}</div></div>
     </div>`;
   const dEl = document.getElementById("cd-days");
   const hEl = document.getElementById("cd-hours");
@@ -137,7 +273,8 @@ function renderCountdown(sessions) {
   function tick() {
     const diff = target.getTime() - Date.now();
     if (diff <= 0) {
-      el.innerHTML = `<div class="countdown-started">⏰ 分享会即将开始！</div>`;
+      const started = (currentLang === "en" && U.countdown_started) ? U.countdown_started : "⏰ 分享会即将开始！";
+      el.innerHTML = `<div class="countdown-started">${started}</div>`;
       clearInterval(countdownTimer);
       return;
     }
@@ -166,7 +303,10 @@ async function renderRegisterCounter(show) {
     const { data, error } = await supabaseClient.from("registration_total_count").select("total").single();
     if (error) throw error;
     el.hidden = false;
-    el.textContent = `🔥 已有 ${data.total} 人报名`;
+    const U = (typeof UI_STRINGS_EN !== "undefined") ? UI_STRINGS_EN : {};
+    el.textContent = (currentLang === "en")
+      ? `${U.register_counter_prefix || "🔥"} ${data.total} ${U.register_counter_suffix || "people have registered"}`
+      : `🔥 已有 ${data.total} 人报名`;
   } catch (err) {
     el.hidden = true;
   }
@@ -230,7 +370,11 @@ async function renderAgentInviteCard() {
     if (!data || (!data.name && !data.intro && !data.photo_url)) return;
 
     const name = (data.name || "").trim();
-    setText("agent-invite-title", name ? `${name} 邀请你认识 MAE` : "邀请你认识 MAE");
+    const U = (typeof UI_STRINGS_EN !== "undefined") ? UI_STRINGS_EN : {};
+    const inviteTitle = (currentLang === "en")
+      ? (name ? `${name} ${U.agent_invite_named_suffix || "invites you to meet MAE"}` : (U.agent_invite_fallback || "Meet MAE"))
+      : (name ? `${name} 邀请你认识 MAE` : "邀请你认识 MAE");
+    setText("agent-invite-title", inviteTitle);
     setText("agent-invite-intro", data.intro || "");
 
     const photoEl = document.getElementById("agent-invite-photo");
@@ -259,6 +403,14 @@ const GROW_STAGE_META = [
   { cls: "p4", tagText: "阶段四", icon: "target" },
   { cls: "p5", tagText: "阶段五", icon: "crown" }
 ];
+function growStageTagText(i) {
+  if (currentLang === "en") {
+    const U = (typeof UI_STRINGS_EN !== "undefined") ? UI_STRINGS_EN : {};
+    return `${U.grow_stage_prefix || "Stage"} ${i + 1}`;
+  }
+  const meta = GROW_STAGE_META[i] || GROW_STAGE_META[GROW_STAGE_META.length - 1];
+  return meta.tagText;
+}
 let growStages = null;
 let growExpandedIndex = 0;
 let growAutoTimer = null;
@@ -288,7 +440,7 @@ function renderGrowAccordion(stages) {
       inner = `<span class="collapsed-label">${s.module || ""}</span>`;
     }
     return `<div class="panel ${meta.cls}${expanded ? " expanded" : ""}" data-idx="${i}">
-      <span class="stage-tag">${meta.tagText}</span>
+      <span class="stage-tag">${growStageTagText(i)}</span>
       ${lockBadge}
       ${inner}
     </div>`;
@@ -324,7 +476,7 @@ function startGrowAutoRotate() {
 }
 
 function render(content) {
-  const c = content;
+  const c = buildDisplayContent(content);
 
   // Hero
   setText("hero-title", c.hero.title);
@@ -384,9 +536,11 @@ function render(content) {
   const brandImages = migrateBrandImages(c.brand);
   const brandGrid = document.getElementById("brand-images-grid");
   if (brandGrid) {
+    const brandNoPhotosText = (currentLang === "en" && typeof UI_STRINGS_EN !== "undefined" && UI_STRINGS_EN.brand_no_photos)
+      ? UI_STRINGS_EN.brand_no_photos : "[ 尚未上传照片 ]";
     brandGrid.innerHTML = brandImages.length
       ? brandImages.map(url => `<div class="media-slot"><img src="${url}" alt=""></div>`).join("")
-      : `<div class="media-slot">[ 尚未上传照片 ]</div>`;
+      : `<div class="media-slot">${brandNoPhotosText}</div>`;
   }
 
   // Milestones
@@ -396,9 +550,11 @@ function render(content) {
   const milestoneImages = c.milestones.images || [];
   mg.innerHTML = c.milestones.captions.map((cap, i) => {
     const img = milestoneImages[i];
+    const milestonePlaceholderPrefix = (currentLang === "en" && typeof UI_STRINGS_EN !== "undefined" && UI_STRINGS_EN.milestone_photo_prefix)
+      ? UI_STRINGS_EN.milestone_photo_prefix : "Milestone 照片";
     const media = img
       ? `<div class="media-slot wide"><img src="${img}" alt=""></div>`
-      : `<div class="media-slot wide">[ Milestone 照片 ${i + 1} ]</div>`;
+      : `<div class="media-slot wide">[ ${milestonePlaceholderPrefix} ${i + 1} ]</div>`;
     return `
     <figure class="gallery-item">
       ${media}
@@ -434,6 +590,8 @@ function render(content) {
     resultsWarningEl.hidden = !c.results.warning;
   }
   const rg = document.getElementById("results-grid");
+  const resultsWhoNote = (currentLang === "en" && typeof UI_STRINGS_EN !== "undefined" && UI_STRINGS_EN.results_who_note)
+    ? UI_STRINGS_EN.results_who_note : "（照片/影片经本人同意后使用）";
   rg.innerHTML = c.results.items.map(r => {
     const embed = r.ig_link
       ? `<div class="review-embed"><blockquote class="instagram-media" data-instgrm-permalink="${r.ig_link}" data-instgrm-version="14"></blockquote></div>`
@@ -442,7 +600,7 @@ function render(content) {
     <div class="review-card card">
       ${embed}
       <blockquote>"${r.quote}"</blockquote>
-      <div class="who">${r.who} <span style="font-weight:400;color:var(--muted);">（照片/影片经本人同意后使用）</span></div>
+      <div class="who">${r.who} <span style="font-weight:400;color:var(--muted);">${resultsWhoNote}</span></div>
     </div>`;
   }).join("");
   // Instagram 的 embed.js 只会自动处理「脚本跑的时候」页面上已经有的 blockquote，
@@ -483,7 +641,9 @@ function render(content) {
         if (failed && isFinalCheck) {
           const link = bq.getAttribute("data-instgrm-permalink") || "";
           if (link) {
-            embedEl.innerHTML = `<a class="ig-embed-fallback" href="${link}" target="_blank" rel="noopener">📎 点这里查看这则 Instagram 贴文 →</a>`;
+            const igFallbackText = (currentLang === "en" && typeof UI_STRINGS_EN !== "undefined" && UI_STRINGS_EN.ig_fallback_link)
+              ? UI_STRINGS_EN.ig_fallback_link : "📎 点这里查看这则 Instagram 贴文 →";
+            embedEl.innerHTML = `<a class="ig-embed-fallback" href="${link}" target="_blank" rel="noopener">${igFallbackText}</a>`;
           }
         }
       });
@@ -573,9 +733,14 @@ function render(content) {
   }
 }
 
+// 保存「中文版」的合并结果（DEFAULT_CONTENT + Supabase 覆盖），语言切换的时候
+// 会重新拿这份去叠英文覆盖层再画一次，不用重新读一次 Supabase。
+let lastMergedContent = null;
+
 async function loadContent() {
   // 先用预设内容渲染一次，避免网络慢的时候页面空白
   const merged = JSON.parse(JSON.stringify(DEFAULT_CONTENT));
+  lastMergedContent = merged;
   render(merged);
 
   try {
@@ -597,6 +762,7 @@ async function loadContent() {
           merged[row.id] = Object.assign({}, merged[row.id], row.content);
         }
       });
+      lastMergedContent = merged;
       render(merged);
     }
   } catch (err) {
@@ -619,7 +785,8 @@ function initForm() {
     const btn = form.querySelector("button[type=submit]");
     const original = btn.textContent;
     btn.disabled = true;
-    btn.textContent = "提交中...";
+    btn.textContent = (currentLang === "en" && typeof UI_STRINGS_EN !== "undefined" && UI_STRINGS_EN.form_submit_loading)
+      ? UI_STRINGS_EN.form_submit_loading : "提交中...";
 
     const payload = {
       name: form.name.value.trim(),
@@ -658,6 +825,7 @@ function initForm() {
   });
 }
 
+initLangSwitch();
 loadContent();
 initForm();
 renderAgentInviteCard();
