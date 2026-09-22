@@ -46,6 +46,21 @@
   @media(min-width:720px){
     .logo-img{height:60px;}
   }
+  /* 简/EN 语言切换：跟「立即报名」按钮一起放在 header 右边 */
+  .header-actions{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .lang-switch{display:flex;border:1.5px solid var(--purple);border-radius:999px;overflow:hidden;flex-shrink:0;}
+  .lang-btn{
+    border:none;background:#fff;color:var(--purple);
+    font-weight:700;font-size:11.5px;padding:8.4px 13px;
+    cursor:pointer;font-family:inherit;line-height:1;
+  }
+  .lang-btn.active{background:var(--purple);color:#fff;}
+  .lang-btn:not(.active):hover{background:var(--purple-light);}
+  /* Hero 区块「本场分享会以中文进行」提示：只在英文版显示 */
+  .lang-note{
+    font-size:13px;color:var(--muted);margin-top:-20px;margin-bottom:28px;
+  }
+  .hero.has-photo .lang-note{color:rgba(255,255,255,0.85);}
   .btn{
     display:inline-block;
     background:var(--purple);
