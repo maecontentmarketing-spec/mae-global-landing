@@ -1131,13 +1131,15 @@ function loadOverview(rows) {
     <div class="trend-row"><span>${k}</span><span>${v} 人</span></div>`).join("")
     || `<div class="trend-row"><span>暂无资料</span></div>`;
 
-  // Kate 个人分享 / 总群代理分享 / MAE GROUP（公司IG官方帖子+Facebook广告+Instagram广告）
-  // 这 3 个数字用来画上面独立的统计卡片；「广告来源细分」再把 MAE GROUP 里的
-  // Facebook 广告／Instagram 广告拆开各自算一次（公司IG官方帖子不算广告，不放进这里）。
-  let kateCount = 0, groupShareCount = 0, maeGroupCount = 0, fbAdsCount = 0, igAdsCount = 0;
+  // Kate 个人分享 / 总群代理分享 / MAE GROUP（公司IG官方帖子+Facebook广告+Instagram广告）/
+  // 参与代理（Angi、Sandy、Excellent Leader Dashboard 的 Member ID）这几个数字用来画上面
+  // 独立的统计卡片；「MAE 广告细分」再把 MAE GROUP 里的 Facebook 广告／Instagram 广告
+  // 拆开各自算一次（公司IG官方帖子不算广告，不放进这里），两个加起来就是「MAE 广告带来几个」。
+  let kateCount = 0, groupShareCount = 0, maeGroupCount = 0, fbAdsCount = 0, igAdsCount = 0, agentCount = 0;
   rows.forEach(r => {
     const c = classifyLead(r);
-    if (c.group === "kate") kateCount++;
+    if (c.group === "agent") agentCount++;
+    else if (c.group === "kate") kateCount++;
     else if (c.group === "group_share") groupShareCount++;
     else if (c.group === "mae_group") {
       maeGroupCount++;
@@ -1145,6 +1147,7 @@ function loadOverview(rows) {
       else if (c.channel === "ig_ads") igAdsCount++;
     }
   });
+  const maeAdsCount = fbAdsCount + igAdsCount;
   const adsRows = `
     <div class="trend-row"><span>Facebook 广告</span><span>${fbAdsCount} 人</span></div>
     <div class="trend-row"><span>Instagram 广告</span><span>${igAdsCount} 人</span></div>`;
@@ -1161,16 +1164,30 @@ function loadOverview(rows) {
 
   const unremindedCount = rows.filter(r => !r.reminded).length;
 
+  // 排版分成 4 排：每排各自是独立的 grid（用 data-cols 指定栏数），
+  // 不会再因为不同排的项目数量不同而互相影响栏宽——之前全部卡片/清单挤在
+  // 同一个大 grid 里，卡片数量一变栏宽就跑掉，这次改成每排独立，以后再调
+  // 整某一排的项目数量也不会连累到别排。
   el.innerHTML = `
-    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">总报名人数</div></div>
-    <div class="stat-card"><div class="stat-num">${unremindedCount}</div><div class="stat-label">还没标记「已提醒」的人数</div></div>
-    <div class="stat-card"><div class="stat-num">${kateCount}</div><div class="stat-label">Kate 带来几人</div></div>
-    <div class="stat-card"><div class="stat-num">${groupShareCount}</div><div class="stat-label">总群代理分享带来几人</div></div>
-    <div class="stat-card"><div class="stat-num">${maeGroupCount}</div><div class="stat-label">MAE GROUP 带来几人</div></div>
-    <div class="trend-block"><h4>按天报名趋势（最近 14 天）</h4><div class="trend-list">${dayRows}</div></div>
-    <div class="trend-block"><h4>每个代理带来几人</h4><div class="trend-list">${agentRows}</div></div>
-    <div class="trend-block"><h4>广告带来几人</h4><div class="trend-list">${adsRows}</div></div>
-    <div class="trend-block"><h4>按意向等级统计</h4><div class="trend-list">${intentRows}</div></div>`;
+    <div class="overview-row" data-cols="2">
+      <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">总报名人数</div></div>
+      <div class="stat-card"><div class="stat-num">${unremindedCount}</div><div class="stat-label">还没标记「已提醒」的人数</div></div>
+    </div>
+    <div class="overview-row" data-cols="3">
+      <div class="stat-card"><div class="stat-num">${maeGroupCount}</div><div class="stat-label">MAE GROUP 带来几人</div></div>
+      <div class="stat-card"><div class="stat-num">${maeAdsCount}</div><div class="stat-label">MAE 广告带来几个</div></div>
+      <div class="stat-card"><div class="stat-num">${kateCount}</div><div class="stat-label">Kate 带来几人</div></div>
+    </div>
+    <div class="overview-row" data-cols="2">
+      <div class="stat-card"><div class="stat-num">${agentCount}</div><div class="stat-label">参与代理带来几个</div></div>
+      <div class="stat-card"><div class="stat-num">${groupShareCount}</div><div class="stat-label">总群代理分享带来几人</div></div>
+    </div>
+    <div class="overview-row overview-row-trends" data-cols="4">
+      <div class="trend-block"><h4>按天报名趋势（最近 14 天）</h4><div class="trend-list">${dayRows}</div></div>
+      <div class="trend-block"><h4>每个代理带来几人</h4><div class="trend-list">${agentRows}</div></div>
+      <div class="trend-block"><h4>MAE 广告细分</h4><div class="trend-list">${adsRows}</div></div>
+      <div class="trend-block"><h4>按意向等级统计</h4><div class="trend-list">${intentRows}</div></div>
+    </div>`;
 }
 
 // 导出 CSV：前面加 ﻿（BOM）是为了让 Excel 打开时中文不会变乱码。
