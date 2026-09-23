@@ -525,7 +525,10 @@
 .tab-panel.active{display:block;}
 
 /* ---------- Admin: overview stats + trend lists ---------- */
-.overview-grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start;}
+/* #leads-overview 本身只是竖着排 4 排（overview-row）的容器，
+   每一排各自是独立的 grid，栏数用 data-cols 指定。 */
+.overview-grid{display:flex;flex-direction:column;gap:20px;}
+.overview-row{display:grid;grid-template-columns:1fr;gap:16px;align-items:start;}
 .stat-card{
   background:var(--purple-light);border-radius:14px;padding:18px;text-align:center;
 }
@@ -558,11 +561,12 @@
 }
 
 @media(min-width:640px){
-  /* 原本是 1fr 1.4fr 1.4fr 三个固定栏位（配合当时正好 2 张统计卡片 + 4 个清单区块），
-     现在统计卡片变成 5 张、清单区块变成 4 个，卡片/清单会因为排列顺序落在不同栏位、
-     栏宽对不上，所以改成等宽栏位，不管以后统计卡片/清单区块的数量再增减都不会跑版。 */
-  .overview-grid{grid-template-columns:repeat(3,1fr);}
+  /* 每排（overview-row）各自是独立的 grid，栏数直接对应该排的卡片/清单数量，
+     不会再因为別排的项目数量不同而互相影响栏宽。 */
+  .overview-row[data-cols="2"]{grid-template-columns:repeat(2,1fr);}
+  .overview-row[data-cols="3"]{grid-template-columns:repeat(3,1fr);}
+  .overview-row[data-cols="4"]{grid-template-columns:repeat(2,1fr);}
 }
 @media(min-width:960px){
-  .overview-grid{grid-template-columns:repeat(4,1fr);}
+  .overview-row[data-cols="4"]{grid-template-columns:repeat(4,1fr);}
 }
