@@ -30,7 +30,7 @@ let agentProfilesMap = {}; // 代理自己在 agent-profile.html 填过的名字
 const UTM_LINKS = [
   { label: "Kate 个人分享（无代理归属）", params: "utm_source=kate&utm_medium=personal" },
   { label: "公司 IG 官方帖子", params: "utm_source=ig&utm_medium=organic" },
-  { label: "公司 IG Story", params: "utm_source=ig&utm_medium=story" },
+  { label: "总群代理分享", params: "utm_source=ig&utm_medium=story" },
   { label: "Facebook 广告", params: "utm_source=fb&utm_medium=ads" },
   { label: "Instagram 广告", params: "utm_source=ig&utm_medium=ads" }
 ];
@@ -93,6 +93,35 @@ function displayAgentCode(code) {
   if (!code) return "Kate";
   const labelMap = agentLinkLabelMap();
   return labelMap[code] ? `${labelMap[code]}（${code}）` : code;
+}
+
+// ============================================================
+// 判断一笔报名「算是从哪里来的」，报名名单「代理代码」栏 + Overview 统计都共用这个。
+//
+// 以前的写法是「没有代理代码（agent_code）就一律当作是 Kate」——但「公司 IG 官方帖子／
+// Facebook 广告／Instagram 广告／总群代理分享」这 4 个现成渠道连结全部都没有带代理代码，
+// 结果全部也被算成「Kate」，混在一起分不出来。现在改成：有代理代码的话（Angi/Sandy 手动生成的、
+// 或 EL002 真正的 Member ID）照旧显示代码本身；没有代理代码的话，改看这笔报名带的
+// utm_source/utm_medium 组合，分辨是 Kate 个人分享／总群代理分享／公司IG官方帖子／
+// Facebook广告／Instagram广告 这几种官方渠道。
+//
+// 「MAE GROUP」只是把公司IG官方帖子/Facebook广告/Instagram广告这 3 个渠道汇总显示用的
+// 一个後台显示层分类，不是真的写进 Supabase 的代理代码——所以这几个连结完全不用换，
+// Meta 广告後台/IG 帖子上已经在用的网址都不用动。
+function classifyLead(row) {
+  if (row.agent_code) {
+    const labelMap = agentLinkLabelMap();
+    const label = labelMap[row.agent_code] ? `${labelMap[row.agent_code]}（${row.agent_code}）` : row.agent_code;
+    return { key: label, group: "agent" };
+  }
+  const src = row.utm_source || "";
+  const med = row.utm_medium || "";
+  if (src === "kate" && med === "personal") return { key: "Kate 个人分享", group: "kate" };
+  if (src === "ig" && med === "story") return { key: "总群代理分享", group: "group_share" };
+  if (src === "ig" && med === "organic") return { key: "MAE GROUP（公司IG官方帖子）", group: "mae_group", channel: "ig_organic" };
+  if (src === "fb" && med === "ads") return { key: "MAE GROUP（Facebook广告）", group: "mae_group", channel: "fb_ads" };
+  if (src === "ig" && med === "ads") return { key: "MAE GROUP（Instagram广告）", group: "mae_group", channel: "ig_ads" };
+  return { key: "未知来源（无代理代码，也没带 utm 参数）", group: "unknown" };
 }
 
 // 读取代理自己在 agent-profile.html 填过的名字（跟首页邀请卡片用的是同一份资料），
@@ -934,7 +963,7 @@ function renderLeadsTable() {
       <td>${r.phone || ""}</td>
       <td>${r.city || ""}</td>
       <td>${r.intent || ""}</td>
-      <td>${displayAgentCode(r.agent_code)}</td>
+      <td>${classifyLead(r).key}</td>
       <td>${r.utm_source ? (r.utm_source + (r.utm_medium ? " / " + r.utm_medium : "")) : ""}</td>
       <td>${remarkInputHtml(r.id, r.remark)}</td>
       <td>${remindedCheckboxHtml(r.id, r.reminded)}</td>
@@ -1091,25 +1120,34 @@ function loadOverview(rows) {
     <div class="trend-row"><span>${k}</span><span>${dayMap[k]} 人</span></div>`).join("")
     || `<div class="trend-row"><span>暂无资料</span></div>`;
 
+  // 每个代理带来几人：现在跟报名名单「代理代码」栏用同一套 classifyLead() 判断，
+  // 不会再把没有代理代码的报名（公司IG官方帖子/FB广告/IG广告/总群代理分享）都混着显示成「Kate」。
   const agentMap = {};
   rows.forEach(r => {
-    const key = r.agent_code ? displayAgentCode(r.agent_code) : "Kate（无代理代码）";
+    const key = classifyLead(r).key;
     agentMap[key] = (agentMap[key] || 0) + 1;
   });
   const agentRows = Object.entries(agentMap).sort((a, b) => b[1] - a[1]).map(([k, v]) => `
     <div class="trend-row"><span>${k}</span><span>${v} 人</span></div>`).join("")
     || `<div class="trend-row"><span>暂无资料</span></div>`;
 
-  // 按渠道来源统计：只看有带 utm_source 的报名（公司自己发的渠道），代理专属连接不算在这里面。
-  const sourceMap = {};
+  // Kate 个人分享 / 总群代理分享 / MAE GROUP（公司IG官方帖子+Facebook广告+Instagram广告）
+  // 这 3 个数字用来画上面独立的统计卡片；「广告来源细分」再把 MAE GROUP 里的
+  // Facebook 广告／Instagram 广告拆开各自算一次（公司IG官方帖子不算广告，不放进这里）。
+  let kateCount = 0, groupShareCount = 0, maeGroupCount = 0, fbAdsCount = 0, igAdsCount = 0;
   rows.forEach(r => {
-    if (!r.utm_source) return;
-    const key = r.utm_source + (r.utm_medium ? " / " + r.utm_medium : "");
-    sourceMap[key] = (sourceMap[key] || 0) + 1;
+    const c = classifyLead(r);
+    if (c.group === "kate") kateCount++;
+    else if (c.group === "group_share") groupShareCount++;
+    else if (c.group === "mae_group") {
+      maeGroupCount++;
+      if (c.channel === "fb_ads") fbAdsCount++;
+      else if (c.channel === "ig_ads") igAdsCount++;
+    }
   });
-  const sourceRows = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]).map(([k, v]) => `
-    <div class="trend-row"><span>${k}</span><span>${v} 人</span></div>`).join("")
-    || `<div class="trend-row"><span>暂无资料（还没有用带 utm_source 的连接带来报名）</span></div>`;
+  const adsRows = `
+    <div class="trend-row"><span>Facebook 广告</span><span>${fbAdsCount} 人</span></div>
+    <div class="trend-row"><span>Instagram 广告</span><span>${igAdsCount} 人</span></div>`;
 
   // 按意向等级统计：看这批报名的人大概是什么意向组成。
   const intentMap = {};
@@ -1126,9 +1164,12 @@ function loadOverview(rows) {
   el.innerHTML = `
     <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">总报名人数</div></div>
     <div class="stat-card"><div class="stat-num">${unremindedCount}</div><div class="stat-label">还没标记「已提醒」的人数</div></div>
+    <div class="stat-card"><div class="stat-num">${kateCount}</div><div class="stat-label">Kate 带来几人</div></div>
+    <div class="stat-card"><div class="stat-num">${groupShareCount}</div><div class="stat-label">总群代理分享带来几人</div></div>
+    <div class="stat-card"><div class="stat-num">${maeGroupCount}</div><div class="stat-label">MAE GROUP 带来几人</div></div>
     <div class="trend-block"><h4>按天报名趋势（最近 14 天）</h4><div class="trend-list">${dayRows}</div></div>
     <div class="trend-block"><h4>每个代理带来几人</h4><div class="trend-list">${agentRows}</div></div>
-    <div class="trend-block"><h4>按渠道来源统计</h4><div class="trend-list">${sourceRows}</div></div>
+    <div class="trend-block"><h4>广告带来几人</h4><div class="trend-list">${adsRows}</div></div>
     <div class="trend-block"><h4>按意向等级统计</h4><div class="trend-list">${intentRows}</div></div>`;
 }
 
