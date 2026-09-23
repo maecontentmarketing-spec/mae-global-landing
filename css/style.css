@@ -525,7 +525,7 @@
 .tab-panel.active{display:block;}
 
 /* ---------- Admin: overview stats + trend lists ---------- */
-.overview-grid{display:grid;grid-template-columns:1fr;gap:16px;}
+.overview-grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start;}
 .stat-card{
   background:var(--purple-light);border-radius:14px;padding:18px;text-align:center;
 }
@@ -558,5 +558,11 @@
 }
 
 @media(min-width:640px){
-  .overview-grid{grid-template-columns:1fr 1.4fr 1.4fr;}
+  /* 原本是 1fr 1.4fr 1.4fr 三个固定栏位（配合当时正好 2 张统计卡片 + 4 个清单区块），
+     现在统计卡片变成 5 张、清单区块变成 4 个，卡片/清单会因为排列顺序落在不同栏位、
+     栏宽对不上，所以改成等宽栏位，不管以后统计卡片/清单区块的数量再增减都不会跑版。 */
+  .overview-grid{grid-template-columns:repeat(3,1fr);}
+}
+@media(min-width:960px){
+  .overview-grid{grid-template-columns:repeat(4,1fr);}
 }
