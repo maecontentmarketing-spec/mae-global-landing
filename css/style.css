@@ -389,6 +389,13 @@
 .form-msg.err{background:#fdf0f0;color:#a3312f;border:1px solid #f3caca;}
 .btn[disabled]{opacity:.6;cursor:not-allowed;}
 
+/* 「暂停接受报名」打勾时取代整个表单显示的提示文字（跟 .form-msg 分开一套样式，
+   语气不是错误/成功提示，是中性的「先别急，敬请期待」）。 */
+.form-closed-msg{
+  background:var(--purple-light);color:var(--purple-dark);border:1px solid var(--card-border);
+  border-radius:12px;padding:22px 18px;text-align:center;font-size:15.5px;font-weight:700;
+}
+
 /* ---------- Admin page ---------- */
 .admin-shell{max-width:900px;margin:0 auto;padding:40px 24px 80px;}
 .admin-login{max-width:400px;margin:80px auto;text-align:center;}
@@ -498,6 +505,18 @@
   flex:1;border:1px solid var(--card-border);border-radius:10px;
   padding:9px 12px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff;
 }
+
+/* ---------- Admin: 报名名单场次分界点清单（跟 Zoom 场次同一套 .session-row 版面，
+   多一个场次名字文字栏位） ---------- */
+.lead-session-row input[type="text"]{
+  flex:1;border:1px solid var(--card-border);border-radius:10px;
+  padding:9px 12px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff;
+}
+
+/* ---------- Admin: 报名名单/Overview 按场次分的小 Tab 列（重用主导览的 .tab-btn 样式，
+   只是缩小、去掉下面的大 margin，视觉上分清楚这是「筛选」而不是页面切换） ---------- */
+.lead-session-tabbar{margin-bottom:0;border-bottom:1px solid var(--card-border);}
+.lead-session-tabbar .tab-btn{padding:8px 14px;font-size:13.5px;}
 
 /* ---------- Admin: layout drag-reorder card ---------- */
 .hint{font-size:13px;color:var(--muted);margin:0 0 14px;}
