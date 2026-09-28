@@ -219,6 +219,9 @@
       <div class="form-msg ok" id="form-msg-ok" data-i18n="form_msg_ok">谢谢报名！我们收到你的资料了，活动前会再联络你。</div>
       <div class="form-msg info" id="form-msg-dup" data-i18n="form_msg_dup">这个邮箱已经报名过了，我们已经收到你的资料，很快会联络你！</div>
       <div class="form-msg err" id="form-msg-err" data-i18n="form_msg_err">提交失败，请稍后再试一次，或直接 WhatsApp 联络我们。</div>
+      <!-- 后台「暂停接受报名」打勾时，这段提示文字会取代下面整个表单显示；
+           右上角「立即报名」按钮/所有专属连结完全不受影响，点了一样会跳到这个区块。 -->
+      <div class="form-closed-msg" id="register-closed-msg" hidden></div>
       <form id="register-form">
         <div class="form-field">
           <label data-i18n="form_label_name">姓名</label>

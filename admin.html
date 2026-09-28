@@ -81,7 +81,18 @@
     </div>
 
     <div class="admin-section card">
+      <h3>场次分界设定
+        <span style="float:right;"><button class="link-btn" id="save-lead-sessions-btn">保存</button></span>
+      </h3>
+      <p class="hint">把「Overview」「报名名单」按场次分成不同 Tab 看用的。加一个分界时间点，代表「这个时间之前算上一场，这个时间（含）之后算下一场」——例如第一场是 9/28 晚上 8 点，可以设一个分界时间 9/28 晚上 7:30，7:30 之前报名的算第一场，7:30 之后报名的（包括还没决定日期的下一场）都会自动归到下一个 Tab，之后要再分第三场，就再加一个分界点。一个分界点都还没设定的话，下面维持现在的样子，显示全部资料、不分 Tab。</p>
+      <div id="lead-sessions-list"></div>
+      <button type="button" class="link-btn" id="add-lead-session-btn">+ 加一个分界点</button>
+      <div class="form-msg err" id="lead-sessions-msg" style="margin-top:8px;"></div>
+    </div>
+
+    <div class="admin-section card">
       <h3>Overview 总览</h3>
+      <div class="admin-tabs lead-session-tabbar" id="lead-session-tabs" hidden></div>
       <div class="overview-grid" id="leads-overview"></div>
     </div>
 
@@ -93,6 +104,7 @@
         </span>
       </h3>
       <p class="hint" id="next-session-hint"></p>
+      <p class="hint">设定了「场次分界」的话，这份名单也会跟着上面 Overview 的 Tab 一起筛选，只显示你选到的那一场；「导出 CSV」不受影响，永远是导出全部场次的资料。</p>
       <p class="hint">「备注」「提醒」栏位都可以直接打字/打勾，填完点别的地方就会自动保存。「提醒」是给 Zoom 前一天要提醒报名者用的，勾了代表你已经发过提醒信了。</p>
       <label class="checkbox-inline"><input type="checkbox" id="filter-unreminded"> 只显示还没提醒的</label>
       <div style="overflow-x:auto;">
