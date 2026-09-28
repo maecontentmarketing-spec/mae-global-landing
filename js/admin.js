@@ -13,7 +13,7 @@ const TEXT_FIELDS = {
   results: [["title", "标题", "text"], ["warning", "警示文字", "textarea"]],
   incentive_trip: [["title", "标题", "text"], ["subtitle", "副标题", "textarea"]],
   team_building: [["title", "标题", "text"], ["subtitle", "副标题", "textarea"]],
-  register: [["p1", "段落 1", "textarea"], ["p2", "段落 2", "textarea"], ["button", "按钮文字", "text"]],
+  register: [["p1", "段落 1", "textarea"], ["p2", "段落 2", "textarea"], ["button", "按钮文字", "text"], ["closed_message", "暂停报名时显示的提示文字（英文模式会显示固定的英文提示，不受这个栏位影响）", "textarea"]],
   closing: [["line1", "第一行", "text"], ["line2", "第二行", "text"]],
   footer: [["email", "联系邮箱", "text"], ["phone", "联系电话", "text"], ["address", "地址", "text"], ["instagram_link", "Instagram 连结", "text"], ["whatsapp_link", "WhatsApp 连结", "text"]]
 };
@@ -21,6 +21,8 @@ const TEXT_FIELDS = {
 let lastLeadsRows = []; // 上次读到的报名名单（给 Email 按钮 / CSV 导出用）
 let agentLinksList = []; // 上次读到的「专属连接工具」生成过的连接（给报名名单/Overview 对照名字用）
 let agentProfilesMap = {}; // 代理自己在 agent-profile.html 填过的名字（code -> name），给 Email 模板 {{agent_name}} 用
+let leadSessionsList = []; // 「场次分界设定」目前的分界点清单：{cutoff, label}，来自 currentContent.lead_sessions.items
+let activeLeadSessionTab = 0; // 目前选到的场次 Tab（0-indexed）；没有分界点时不会用到
 
 // ============================================================
 // 专属连接工具：现成 UTM 连接 + 给非 EL002 的人生成专属连接（含查名单连接）
@@ -537,6 +539,7 @@ function renderSection(key, data) {
   }
   if (key === "register") {
     inner += checkboxField("show_counter", "在报名按钮旁显示「已有 XX 人报名」", data.register.show_counter);
+    inner += checkboxField("registration_closed", "暂停接受报名（打勾后，前台报名表单会换成上面那段提示文字；右上角「立即报名」按钮/所有专属连结都不受影响，只是点进来看到的是提示而已）", data.register.registration_closed);
   }
 
   if (key === "highlights") {
@@ -926,6 +929,112 @@ async function saveLayout() {
   }
 }
 
+// ============================================================
+// 报名名单按「场次」分 Tab：跟 event.sessions 一样，datetime-local 字串全部
+// 当作马来西亚/新加坡（GMT+8）时间处理，这样比较报名时间才不会因为时区错位。
+// ============================================================
+function parseLeadSessionCutoff(s) {
+  if (!s) return null;
+  const d = new Date(s.length === 16 ? s + ":00+08:00" : s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// 目前排序好、有效（有填时间）的分界点清单，分界点数量 = N 的话就会有 N+1 个「场次桶」：
+// 第 0~N-1 桶是「这个分界时间之前」报名的，最后一桶（第 N 桶）是全部分界点都过了、
+// 还没设下一个分界点的最新一场。
+function sortedLeadSessionCutoffs() {
+  return leadSessionsList
+    .map(s => ({ label: (s.label || "").trim(), time: parseLeadSessionCutoff(s.cutoff) }))
+    .filter(s => s.time)
+    .sort((a, b) => a.time - b.time);
+}
+
+// 一笔报名资料算是第几个场次桶（0-indexed）。
+function leadSessionBucket(row) {
+  const cutoffs = sortedLeadSessionCutoffs();
+  if (!cutoffs.length) return 0;
+  const t = new Date(row.created_at);
+  for (let i = 0; i < cutoffs.length; i++) {
+    if (t < cutoffs[i].time) return i;
+  }
+  return cutoffs.length;
+}
+
+function leadSessionTabLabel(bucket) {
+  const cutoffs = sortedLeadSessionCutoffs();
+  if (bucket < cutoffs.length) {
+    return cutoffs[bucket].label || `${cutoffs[bucket].time.toLocaleString("zh-CN", { timeZone: "Asia/Kuala_Lumpur" })} 之前`;
+  }
+  return "最新场次";
+}
+
+// 目前选到的 Tab 对应的报名资料；一个分界点都还没设定时，直接回传全部资料（维持原本行为）。
+function leadsForActiveTab() {
+  if (!sortedLeadSessionCutoffs().length) return lastLeadsRows;
+  return lastLeadsRows.filter(r => leadSessionBucket(r) === activeLeadSessionTab);
+}
+
+// 画「场次分界设定」卡片里的分界点清单（+ 加一个分界点 / 移除都是直接操作画面元素）。
+function renderLeadSessionsList() {
+  const el = document.getElementById("lead-sessions-list");
+  if (!el) return;
+  el.innerHTML = leadSessionsList.map((s, i) => `
+    <div class="session-row lead-session-row" data-idx="${i}">
+      <input type="text" placeholder="场次名字，例如：第一场 9/28" data-lead-session-field="label" value="${(s.label || "").toString().replace(/"/g, "&quot;")}">
+      <input type="datetime-local" data-lead-session-field="cutoff" value="${s.cutoff || ""}">
+      <button type="button" class="link-btn remove-lead-session">移除</button>
+    </div>`).join("");
+}
+
+// Overview/报名名单上方的场次 Tab 列：一个分界点都还没设定时整个隐藏（维持原本不分 Tab 的样子）。
+function renderLeadSessionTabs() {
+  const wrap = document.getElementById("lead-session-tabs");
+  if (!wrap) return;
+  const cutoffs = sortedLeadSessionCutoffs();
+  if (!cutoffs.length) {
+    wrap.hidden = true;
+    wrap.innerHTML = "";
+    activeLeadSessionTab = 0;
+    return;
+  }
+  wrap.hidden = false;
+  const numBuckets = cutoffs.length + 1;
+  if (activeLeadSessionTab >= numBuckets) activeLeadSessionTab = numBuckets - 1; // 分界点被删掉时，避免选到不存在的 Tab
+  wrap.innerHTML = Array.from({ length: numBuckets }, (_, i) => `
+    <button type="button" class="tab-btn${i === activeLeadSessionTab ? " active" : ""}" data-bucket="${i}">${leadSessionTabLabel(i)}</button>`).join("");
+}
+
+async function saveLeadSessions() {
+  const listEl = document.getElementById("lead-sessions-list");
+  const msg = document.getElementById("lead-sessions-msg");
+  const rows = Array.from(listEl.querySelectorAll(".lead-session-row")).map(row => ({
+    label: row.querySelector('[data-lead-session-field="label"]').value.trim(),
+    cutoff: row.querySelector('[data-lead-session-field="cutoff"]').value
+  }));
+  if (rows.some(r => !r.cutoff)) {
+    msg.textContent = "每一行都要选分界时间，还没选时间的那一行先删掉，或补上时间再保存。";
+    msg.classList.add("show");
+    return;
+  }
+  msg.classList.remove("show");
+  msg.textContent = "";
+
+  const updated = { items: rows };
+  const { error } = await supabaseClient.from("page_content").upsert({ id: "lead_sessions", content: updated, updated_at: new Date().toISOString() });
+  if (error) {
+    msg.textContent = "保存失败：" + error.message;
+    msg.classList.add("show");
+    return;
+  }
+  currentContent.lead_sessions = updated;
+  leadSessionsList = rows;
+  activeLeadSessionTab = sortedLeadSessionCutoffs().length; // 保存後预设跳去看最新一场
+  renderLeadSessionsList();
+  renderLeadSessionTabs();
+  renderLeadsTable();
+  loadOverview(leadsForActiveTab());
+}
+
 async function loadLeads() {
   const tbody = document.getElementById("leads-body");
   const { data, error } = await supabaseClient
@@ -938,9 +1047,10 @@ async function loadLeads() {
   }
   lastLeadsRows = data || [];
 
+  renderLeadSessionTabs();
   renderLeadsTable();
   updateNextSessionHint();
-  loadOverview(lastLeadsRows);
+  loadOverview(leadsForActiveTab());
 }
 
 // 把 lastLeadsRows 画到表格上——单独拆出来，是因为「只显示还没提醒的」这个筛选
@@ -948,10 +1058,11 @@ async function loadLeads() {
 function renderLeadsTable() {
   const tbody = document.getElementById("leads-body");
   if (!tbody) return;
+  const tabRows = leadsForActiveTab(); // 有设定场次分界的话，先只留目前选到的那一场
   const onlyUnreminded = document.getElementById("filter-unreminded");
   const filtered = (onlyUnreminded && onlyUnreminded.checked)
-    ? lastLeadsRows.filter(r => !r.reminded)
-    : lastLeadsRows;
+    ? tabRows.filter(r => !r.reminded)
+    : tabRows;
 
   tbody.innerHTML = filtered.map(r => {
     const i = lastLeadsRows.indexOf(r); // Email 按钮用「在完整名单里的位置」，跟筛选无关
@@ -1101,7 +1212,7 @@ async function deleteLead(id) {
   lastLeadsRows = lastLeadsRows.filter(r => r.id !== id);
   renderLeadsTable();
   updateNextSessionHint();
-  loadOverview(lastLeadsRows);
+  loadOverview(leadsForActiveTab());
 }
 
 // 报名数据 Overview：总人数 + 按天趋势（最近 14 天）+ 每个代理带来几人。
@@ -1300,6 +1411,10 @@ function showEditor(email) {
   loadMergedContent().then(async () => {
     renderTemplates();
     renderUtmLinks();
+    // 场次分界点清单要先读进来、算好预设选哪个 Tab（最新一场），报名名单/Overview 才会照场次显示。
+    leadSessionsList = (currentContent.lead_sessions && currentContent.lead_sessions.items) || [];
+    activeLeadSessionTab = sortedLeadSessionCutoffs().length;
+    renderLeadSessionsList();
     await loadAgentLinks(); // 要先读到标签对照表，报名名单/Overview 才能正确显示名字
     await loadAgentProfiles(); // 读代理自己填过的名字，给 Email 模板 {{agent_name}} 用
     loadLeads();
@@ -1354,6 +1469,42 @@ async function init() {
 
   const saveTplBtn = document.getElementById("save-templates-btn");
   if (saveTplBtn) saveTplBtn.addEventListener("click", saveTemplates);
+
+  // 场次分界设定：「+ 加一个分界点」「移除」直接操作画面元素，跟 Zoom 场次那套是同一个做法。
+  const addLeadSessionBtn = document.getElementById("add-lead-session-btn");
+  if (addLeadSessionBtn) {
+    addLeadSessionBtn.addEventListener("click", () => {
+      leadSessionsList.push({ label: "", cutoff: "" });
+      renderLeadSessionsList();
+    });
+  }
+
+  const leadSessionsListEl = document.getElementById("lead-sessions-list");
+  if (leadSessionsListEl) {
+    leadSessionsListEl.addEventListener("click", (e) => {
+      if (e.target.classList.contains("remove-lead-session")) {
+        const idx = Number(e.target.closest(".lead-session-row").getAttribute("data-idx"));
+        leadSessionsList.splice(idx, 1);
+        renderLeadSessionsList();
+      }
+    });
+  }
+
+  const saveLeadSessionsBtn = document.getElementById("save-lead-sessions-btn");
+  if (saveLeadSessionsBtn) saveLeadSessionsBtn.addEventListener("click", saveLeadSessions);
+
+  // 场次 Tab：点了切换目前要看哪一场，报名名单/Overview 都会跟着重画。
+  const leadSessionTabsEl = document.getElementById("lead-session-tabs");
+  if (leadSessionTabsEl) {
+    leadSessionTabsEl.addEventListener("click", (e) => {
+      const btn = e.target.closest(".tab-btn");
+      if (!btn) return;
+      activeLeadSessionTab = Number(btn.getAttribute("data-bucket"));
+      renderLeadSessionTabs();
+      renderLeadsTable();
+      loadOverview(leadsForActiveTab());
+    });
+  }
 }
 
 init();

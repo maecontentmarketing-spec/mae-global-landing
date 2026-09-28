@@ -689,6 +689,17 @@ function render(content) {
   setText("register-button", c.register.button);
   renderRegisterCounter(c.register.show_counter);
 
+  // 暂停接受报名：打勾後表单换成提示文字，右上角/其他位置的「立即报名」按钮跟所有专属连结
+  // 完全不受影响，一样正常显示、点了也一样能跳到这个区块，只是看到的是提示文字而不是表单。
+  const registerForm = document.getElementById("register-form");
+  const registerClosedMsg = document.getElementById("register-closed-msg");
+  if (registerForm && registerClosedMsg) {
+    const closed = !!c.register.registration_closed;
+    registerForm.hidden = closed;
+    registerClosedMsg.hidden = !closed;
+    if (closed) registerClosedMsg.textContent = c.register.closed_message || "报名暂时关闭中，敬请期待下一场分享会的消息！";
+  }
+
   // Closing
   setText("closing-line1", c.closing.line1);
   setText("closing-line2", c.closing.line2);

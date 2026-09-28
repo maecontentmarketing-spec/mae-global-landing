@@ -135,7 +135,11 @@ const EN_CONTENT = {
   register: {
     p1: "Want to understand how MAE × AI can help you start your own business?<br>Join our online business sharing session, and we'll walk you through the entire system step by step. (Note: the session is conducted in Mandarin.)",
     p2: "No need to rush a decision — just spend 2 hours understanding it first, then decide if this is the opportunity you've been looking for.",
-    button: "Register for the Business Sharing Session"
+    button: "Register for the Business Sharing Session",
+    // registration_closed 本身是後台可以随时开关的旗标，不分语言，不放在这份英文覆盖层里
+    // （放了反而会被 mergeFields 誤当成「英文版固定要关闭」）。这里只放暂停时要显示的
+    // 英文提示文字，取代中文版的 closed_message。
+    closed_message: "Registration is temporarily closed — stay tuned for details on the next session!"
   }
 };
 

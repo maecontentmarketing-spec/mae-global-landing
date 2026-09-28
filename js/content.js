@@ -167,7 +167,14 @@ const DEFAULT_CONTENT = {
     p2: "不用想清楚要不要加入，只需要先花几个小时，了解这个时代的机会。",
     button: "立即报名事业分享会",
     // 是否在报名按钮旁显示「已有 XX 人报名」的即时人数（社会认同）。默认关闭，后台可以随时开关。
-    show_counter: false
+    show_counter: false,
+    // 暂停接受报名：打勾后，网站上的报名表单（#register 区块）会换成 closed_message 这段
+    // 提示文字，表单栏位/送出按钮先隐藏；右上角「立即报名」按钮、所有专属连结完全不受影响，
+    // 一样正常显示、点了也一样能跳到这个区块，只是看到的是提示文字而不是表单。
+    // 英文模式下会显示固定的英文提示（content-en.js 里的 register.closed_message），
+    // 不受这个栏位内容影响。
+    registration_closed: false,
+    closed_message: "报名暂时关闭中，敬请期待下一场分享会的消息！"
   },
   closing: {
     line1: "这个时代，不会等你想清楚才往前走。",
@@ -196,5 +203,15 @@ const DEFAULT_CONTENT = {
       { label: "Zoom 前一天提醒", subject: "提醒：MAE 事业分享会明天见！", body: "{{name}} 你好，\n\n提醒你，我们的线上事业分享会明天就要开始了，记得先把 Zoom 安装好，准时上线哦！\n\n期待明天见到你。" },
       { label: "优惠配套倒数 1 天", subject: "9 周年优惠配套，明天截止！", body: "{{name}} 你好，\n\n提醒你，MAE 9 周年【Become A MAE Partner】的优惠配套明天就截止了，把握最后机会加入我们！\n\n有任何问题都欢迎联络我们。" }
     ]
+  },
+  // 报名名单按「场次」分 Tab 用的分界点清单：只有後台「报名数据」看得到，不会出现在网站
+  // 前台，也不受「网站排版」控制。items 是 {cutoff, label} 的清单，cutoff 是 datetime-local
+  // 字串（跟 event.sessions 一样，全部当作马来西亚/新加坡 GMT+8 时间处理）。
+  // 玩法：报名时间在 items[0].cutoff 之前的算「第一场」；到了 items[0].cutoff 但还没到
+  // items[1].cutoff 的算「第二场」，以此类推；比全部分界点都晚的算最新一场（还在进行中、
+  // 尚未设下一个分界点）。一个分界点都还没设定时，报名名单/Overview 维持现在的样子，
+  // 显示全部资料、不分 Tab。
+  lead_sessions: {
+    items: []
   }
 };
