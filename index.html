@@ -233,7 +233,18 @@
         </div>
         <div class="form-field">
           <label data-i18n="form_label_phone">电话 / WhatsApp</label>
-          <input type="tel" name="phone" required>
+          <!-- 2026-11 新增：国码下拉 + 号码分开两栏（.phone-row），让後台 WhatsApp 一键按钮
+               不用再用「本地格式一律当马来西亚」那套猜的逻辑。预设选马来西亚（主要市场）。 -->
+          <div class="phone-row">
+            <select name="phone_country_code">
+              <option value="60" selected>+60 MY</option>
+              <option value="65">+65 SG</option>
+              <option value="852">+852 HK</option>
+              <option value="673">+673 BN</option>
+              <option value="" data-i18n="form_option_phone_other">其他 Other</option>
+            </select>
+            <input type="tel" name="phone" required>
+          </div>
         </div>
         <div class="form-field">
           <label data-i18n="form_label_city">所在城市 / 地区</label>
@@ -247,6 +258,33 @@
             <option value="想增加副业收入" data-i18n="form_option_2">想增加副业收入</option>
             <option value="先来了解，还没想清楚" data-i18n="form_option_3">先来了解，还没想清楚</option>
           </select>
+        </div>
+        <!-- 2026-11 新增：报名管道单选，选「MAE 经销商推荐」才会多跳出下面的「推荐人姓名」栏。
+             value 用英文代码（website/founder/agent）而不是中文文字，这样中英文模式送出的
+             值都会是同一个代码，後台/统计不会因为语言不同而对不起来（跟 intent 栏位不一样，
+             intent 目前是直接存中文文字，是已知的小缺口，这次不重蹈覆辙）。 -->
+        <div class="form-field">
+          <label data-i18n="form_label_channel">您是透过以下哪个管道认识这次活动的？</label>
+          <select name="referral_channel" id="referral-channel-select" required>
+            <option value="" disabled selected data-i18n="form_option_placeholder">请选择</option>
+            <option value="website" data-i18n="form_channel_website">MAE 官网 / 社媒</option>
+            <option value="founder" data-i18n="form_channel_founder">创办人分享</option>
+            <option value="agent" data-i18n="form_channel_agent">MAE 经销商推荐</option>
+          </select>
+        </div>
+        <div class="form-field" id="referrer-name-field" hidden>
+          <label data-i18n="form_label_referrer_name">推荐人姓名 / Member ID</label>
+          <input type="text" name="referrer_name" id="referrer-name-input">
+        </div>
+        <!-- 2026-11 新增：场次複选（至少选一场才能送出，这个「至少一个」的检查没办法
+             用 HTML required 原生做到，在 site.js 的 initForm() 送出时另外用 JS 判断）。 -->
+        <div class="form-field">
+          <label data-i18n="form_label_sessions">您要参加哪一场？（可複选）</label>
+          <div class="checkbox-group">
+            <label class="checkbox-field-row"><input type="checkbox" name="sessions" value="zh"><span data-i18n="form_session_zh">🔸华语场｜25/11（三）8:00 PM</span></label>
+            <label class="checkbox-field-row"><input type="checkbox" name="sessions" value="en"><span data-i18n="form_session_en">🔸English Session｜26/11（四）8:00 PM</span></label>
+          </div>
+          <div class="hint" id="sessions-required-hint" data-i18n="form_msg_sessions_required" hidden>请至少选择一场</div>
         </div>
         <div class="register-counter" id="register-counter" hidden></div>
         <button type="submit" class="btn btn-block" id="register-button"></button>

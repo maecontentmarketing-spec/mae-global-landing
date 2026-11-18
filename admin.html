@@ -46,7 +46,7 @@
   <div class="admin-tabs">
     <button class="tab-btn active" data-tab="tab-content">内容 & 排版</button>
     <button class="tab-btn" data-tab="tab-leads">报名数据</button>
-    <button class="tab-btn" data-tab="tab-templates">Email 模板</button>
+    <button class="tab-btn" data-tab="tab-templates">消息模板</button>
   </div>
 
   <!-- Tab 1：内容/排版编辑（现有各板块 + 网站排版拖拽卡片，都在 admin.js 里动态生成） -->
@@ -109,7 +109,7 @@
       <label class="checkbox-inline"><input type="checkbox" id="filter-unreminded"> 只显示还没提醒的</label>
       <div style="overflow-x:auto;">
         <table class="leads-table" id="leads-table">
-          <thead><tr><th>时间</th><th>姓名</th><th>邮箱</th><th>电话</th><th>城市</th><th>意向</th><th>代理代码</th><th>来源</th><th>备注</th><th>提醒</th><th>Email</th><th>删除</th></tr></thead>
+          <thead><tr><th>时间</th><th>姓名</th><th>邮箱</th><th>电话</th><th>城市</th><th>意向</th><th>场次</th><th>管道</th><th>代理代码</th><th>来源</th><th>备注</th><th>提醒</th><th>Email</th><th>WhatsApp</th><th>删除</th></tr></thead>
           <tbody id="leads-body"></tbody>
         </table>
       </div>
@@ -128,6 +128,18 @@
       <p class="hint">这里管理的模板，会出现在「报名数据」名单里每一行的 Email 下拉选单中。{{name}} 会自动换成该笔报名资料的姓名。</p>
       <div id="templates-list"></div>
       <div class="form-msg ok" id="templates-save-msg" style="margin-top:10px;">已保存。</div>
+    </div>
+
+    <div class="admin-section card">
+      <h3>WhatsApp 模板
+        <span style="float:right;">
+          <button class="link-btn" id="add-whatsapp-template-btn">+ 新增模板</button>
+          <button class="btn save-btn" id="save-whatsapp-templates-btn">保存</button>
+        </span>
+      </h3>
+      <p class="hint">这里管理的模板，会出现在「报名数据」名单里每一行的 WhatsApp 下拉选单中。点「WhatsApp」会直接开好聊天窗口、号码和内容都帮你填好，还是要你自己按送出（不会自动发送）。{{name}} 会自动换成该笔报名资料的姓名，{{agent_name}} 会自动换成带来这笔报名的代理名字。</p>
+      <div id="whatsapp-templates-list"></div>
+      <div class="form-msg ok" id="whatsapp-templates-save-msg" style="margin-top:10px;">已保存。</div>
     </div>
   </div>
 </div>
