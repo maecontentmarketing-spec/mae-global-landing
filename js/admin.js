@@ -1071,20 +1071,27 @@ function renderLeadsTable() {
       <td>${new Date(r.created_at).toLocaleString("zh-CN")}</td>
       <td>${r.name || ""}</td>
       <td>${r.email || ""}</td>
-      <td>${r.phone || ""}</td>
+      <td>${phoneCellText(r)}</td>
       <td>${r.city || ""}</td>
       <td>${r.intent || ""}</td>
+      <td>${sessionsCellText(r)}</td>
+      <td>${channelCellHtml(r)}</td>
       <td>${classifyLead(r).key}</td>
       <td>${r.utm_source ? (r.utm_source + (r.utm_medium ? " / " + r.utm_medium : "")) : ""}</td>
       <td>${remarkInputHtml(r.id, r.remark)}</td>
       <td>${remindedCheckboxHtml(r.id, r.reminded)}</td>
       <td>${emailButtonHtml(i)}</td>
+      <td>${whatsappButtonHtml(i)}</td>
       <td>${deleteButtonHtml(r.id)}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="12">${onlyUnreminded && onlyUnreminded.checked ? "都已经提醒过了，没有还没提醒的人" : "暂时没有报名资料"}</td></tr>`;
+  }).join("") || `<tr><td colspan="15">${onlyUnreminded && onlyUnreminded.checked ? "都已经提醒过了，没有还没提醒的人" : "暂时没有报名资料"}</td></tr>`;
 
   document.querySelectorAll(".email-open-btn").forEach(btn => {
     btn.addEventListener("click", () => openGmailForLead(Number(btn.getAttribute("data-idx"))));
+  });
+
+  document.querySelectorAll(".whatsapp-open-btn").forEach(btn => {
+    btn.addEventListener("click", () => openWhatsAppForLead(Number(btn.getAttribute("data-idx"))));
   });
 
   document.querySelectorAll(".remark-input").forEach(input => {
@@ -1163,6 +1170,33 @@ function updateNextSessionHint() {
   if (el) el.textContent = getNearestSessionText();
 }
 
+// 2026-11 新增：「电话」栏位显示——新资料有选国码的话组成「+国码 号码」比较好认，
+// 旧资料（没有 phone_country_code）维持原本只显示号码本身，不会变空白/报错。
+function phoneCellText(r) {
+  if (r.phone_country_code) return `+${r.phone_country_code} ${r.phone || ""}`;
+  return r.phone || "";
+}
+
+// 2026-11 新增：「管道」栏位固定代码 -> 中文显示文字（跟中英文报名表单无关，不管报名者
+// 用哪个语言填表，存进去的都是同一个代码，这里只负责後台显示用的翻译）。
+const CHANNEL_LABELS = { website: "MAE 官网/社媒", founder: "创办人分享", agent: "经销商推荐" };
+function channelCellHtml(r) {
+  const label = CHANNEL_LABELS[r.referral_channel] || "";
+  if (!label) return "";
+  if (r.referral_channel === "agent" && r.referrer_name) {
+    return `${label}<br><span class="hint" style="margin:0;">${r.referrer_name}</span>`;
+  }
+  return label;
+}
+
+// 2026-11 新增：「场次」栏位，sessions 是阵列（例如 ["zh"]、["zh","en"]），旧资料（这次
+// 改版之前报名的）这个栏位是 null/undefined，直接显示空白，不会报错。
+const SESSION_LABELS = { zh: "华语场", en: "English" };
+function sessionsCellText(r) {
+  const arr = Array.isArray(r.sessions) ? r.sessions : [];
+  return arr.map(s => SESSION_LABELS[s] || s).join(" + ");
+}
+
 // 每一行报名资料后面的「Email」栏位：一个模板下拉选单 + 一个开 Gmail 的按钮。
 function emailButtonHtml(idx) {
   const templates = (currentContent.email_templates && currentContent.email_templates.items) || [];
@@ -1189,6 +1223,54 @@ function openGmailForLead(idx) {
   const subject = (tpl.subject || "").replace(/\{\{name\}\}/g, name).replace(/\{\{agent_name\}\}/g, agentName);
   const body = (tpl.body || "").replace(/\{\{name\}\}/g, name).replace(/\{\{agent_name\}\}/g, agentName);
   const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(row.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(url, "_blank");
+}
+
+// 2026-11 新增：报名资料旁边的「WhatsApp」栏位，做法完全照搬上面的 Email 栏位，差别是
+// 没有「标题」、也不是开 Gmail 而是开 wa.me 的一键聊天连结。
+function whatsappButtonHtml(idx) {
+  const templates = (currentContent.whatsapp_templates && currentContent.whatsapp_templates.items) || [];
+  if (!templates.length) return `<span class="hint">还没有设置模板</span>`;
+  const options = templates.map((t, i) => `<option value="${i}">${t.label}</option>`).join("");
+  return `
+    <div class="email-cell">
+      <select class="whatsapp-select" data-idx="${idx}">${options}</select>
+      <button type="button" class="link-btn whatsapp-open-btn" data-idx="${idx}">WhatsApp</button>
+    </div>`;
+}
+
+// wa.me 要求号码是「国际格式、纯数字、不带 + 号」。2026-11 起报名表单新增了国码下拉
+// （phone_country_code），新资料会直接带着明确的国码过来，不用再用「本地格式一律当
+// 马来西亚」那套猜的逻辑——这是 Amy 要求加的，解决了之前新加坡/香港/文莱号码会被
+// 误判的问题。只有「没有国码」的情况（Amy 改版之前的旧资料，或者报名时选了「其他」）
+// 才会 fallback 用旧的猜法：假设是马来西亚号码、把开头的 0 换成 60。
+function normalizePhoneForWhatsApp(row) {
+  const phone = row.phone || "";
+  if (row.phone_country_code) {
+    let digits = phone.replace(/\D/g, "");
+    if (digits.startsWith("0")) digits = digits.slice(1);
+    return row.phone_country_code + digits;
+  }
+  // Fallback（旧资料 / 选了「其他」没有明确国码）：维持原本的猜法。
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("0")) digits = "60" + digits.slice(1);
+  return digits;
+}
+
+// 点「WhatsApp」：挑好的模板内容套上这笔资料的姓名，开一个新分页的 WhatsApp 聊天窗口
+// （号码 + 内容都已经帮你填好，还是要你自己按送出——不会自动发送）。
+function openWhatsAppForLead(idx) {
+  const row = lastLeadsRows[idx];
+  if (!row || !row.phone) return;
+  const select = document.querySelector(`.whatsapp-select[data-idx="${idx}"]`);
+  const templates = (currentContent.whatsapp_templates && currentContent.whatsapp_templates.items) || [];
+  const tpl = templates[Number(select ? select.value : 0)] || templates[0];
+  if (!tpl) return;
+  const name = row.name || "";
+  const agentName = agentNameForCode(row.agent_code);
+  const text = (tpl.body || "").replace(/\{\{name\}\}/g, name).replace(/\{\{agent_name\}\}/g, agentName);
+  const phone = normalizePhoneForWhatsApp(row);
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   window.open(url, "_blank");
 }
 
@@ -1275,6 +1357,21 @@ function loadOverview(rows) {
 
   const unremindedCount = rows.filter(r => !r.reminded).length;
 
+  // 2026-11 新增：报名管道（官网/社媒、创办人分享、经销商推荐）+ 场次（华语场/English/
+  // 两场都要）统计，跟上面既有的统计卡片是分开算的——这两组是报名者自己填的，既有的
+  // classifyLead() 那组是从代理代码/utm 参数判断的，两边资料来源不一样，刻意不合并。
+  let channelWebsiteCount = 0, channelFounderCount = 0, channelAgentCount = 0;
+  let sessionZhCount = 0, sessionEnCount = 0, sessionBothCount = 0;
+  rows.forEach(r => {
+    if (r.referral_channel === "website") channelWebsiteCount++;
+    else if (r.referral_channel === "founder") channelFounderCount++;
+    else if (r.referral_channel === "agent") channelAgentCount++;
+    const sess = Array.isArray(r.sessions) ? r.sessions : [];
+    if (sess.length >= 2) sessionBothCount++;
+    else if (sess[0] === "zh") sessionZhCount++;
+    else if (sess[0] === "en") sessionEnCount++;
+  });
+
   // 排版分成 4 排：每排各自是独立的 grid（用 data-cols 指定栏数），
   // 不会再因为不同排的项目数量不同而互相影响栏宽——之前全部卡片/清单挤在
   // 同一个大 grid 里，卡片数量一变栏宽就跑掉，这次改成每排独立，以后再调
@@ -1293,6 +1390,16 @@ function loadOverview(rows) {
       <div class="stat-card"><div class="stat-num">${agentCount}</div><div class="stat-label">参与代理带来几个</div></div>
       <div class="stat-card"><div class="stat-num">${groupShareCount}</div><div class="stat-label">总群代理分享带来几人</div></div>
     </div>
+    <div class="overview-row" data-cols="3">
+      <div class="stat-card"><div class="stat-num">${channelWebsiteCount}</div><div class="stat-label">自填管道：官网/社媒</div></div>
+      <div class="stat-card"><div class="stat-num">${channelFounderCount}</div><div class="stat-label">自填管道：创办人分享</div></div>
+      <div class="stat-card"><div class="stat-num">${channelAgentCount}</div><div class="stat-label">自填管道：经销商推荐</div></div>
+    </div>
+    <div class="overview-row" data-cols="3">
+      <div class="stat-card"><div class="stat-num">${sessionZhCount}</div><div class="stat-label">只选华语场</div></div>
+      <div class="stat-card"><div class="stat-num">${sessionEnCount}</div><div class="stat-label">只选 English</div></div>
+      <div class="stat-card"><div class="stat-num">${sessionBothCount}</div><div class="stat-label">两场都要</div></div>
+    </div>
     <div class="overview-row overview-row-trends" data-cols="4">
       <div class="trend-block"><h4>按天报名趋势（最近 14 天）</h4><div class="trend-list">${dayRows}</div></div>
       <div class="trend-block"><h4>每个代理带来几人</h4><div class="trend-list">${agentRows}</div></div>
@@ -1304,12 +1411,13 @@ function loadOverview(rows) {
 // 导出 CSV：前面加 ﻿（BOM）是为了让 Excel 打开时中文不会变乱码。
 function exportCsv() {
   const rows = lastLeadsRows;
-  const header = ["提交时间", "姓名", "邮箱", "电话", "城市", "意向", "留言", "代理代码", "utm_source", "utm_medium", "备注", "已提醒"];
+  const header = ["提交时间", "姓名", "邮箱", "电话", "城市", "意向", "场次", "管道", "推荐人姓名/Member ID", "留言", "代理代码", "utm_source", "utm_medium", "备注", "已提醒"];
   const lines = [header.join(",")];
   rows.forEach(r => {
     const cells = [
       new Date(r.created_at).toLocaleString("zh-CN"),
-      r.name || "", r.email || "", r.phone || "", r.city || "", r.intent || "",
+      r.name || "", r.email || "", phoneCellText(r), r.city || "", r.intent || "",
+      sessionsCellText(r), CHANNEL_LABELS[r.referral_channel] || "", r.referrer_name || "",
       (r.message || "").replace(/\n/g, " "), r.agent_code || "", r.utm_source || "", r.utm_medium || "", r.remark || "",
       r.reminded ? "是" : "否"
     ];
@@ -1389,7 +1497,65 @@ async function saveTemplates() {
 }
 
 // ============================================================
-// 后台三个 Tab（内容排版 / 报名数据 / Email 模板）之间的切换
+// 2026-11 新增：WhatsApp 模板卡片，做法完全照搬上面的 Email 模板（renderTemplates 等），
+// 差别只有没有「标题」栏位，而且存进 page_content 用的 id 是 whatsapp_templates。
+// ============================================================
+function renderWhatsappTemplates() {
+  const container = document.getElementById("whatsapp-templates-list");
+  if (!container) return;
+  if (!currentContent.whatsapp_templates) currentContent.whatsapp_templates = { items: [] };
+  const items = currentContent.whatsapp_templates.items || [];
+
+  container.innerHTML = items.map((t, i) => `
+    <div class="admin-section card" data-wa-template-idx="${i}">
+      <h3>模板 ${i + 1} <button type="button" class="link-btn remove-wa-template" data-idx="${i}">删除这个模板</button></h3>
+      <div class="admin-field"><label>模板名称（给自己看，方便挑选）</label>
+        <input type="text" class="wa-tpl-field" data-wa-tpl-field="label" value="${(t.label || "").replace(/"/g, "&quot;")}"></div>
+      <div class="admin-field"><label>WhatsApp 内容（可以用 {{name}} 代表这笔报名资料的姓名，{{agent_name}} 代表带来这笔报名的代理名字——没有代理归属的裸报名会自动留空）</label>
+        <textarea class="wa-tpl-field" data-wa-tpl-field="body" rows="5">${t.body || ""}</textarea></div>
+    </div>`).join("") || `<p class="hint">还没有模板，点上面「+ 新增模板」加一个。</p>`;
+
+  container.querySelectorAll(".remove-wa-template").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.getAttribute("data-idx"));
+      currentContent.whatsapp_templates.items.splice(idx, 1);
+      renderWhatsappTemplates();
+    });
+  });
+}
+
+function collectWhatsappTemplatesFromDom() {
+  const cards = document.querySelectorAll("#whatsapp-templates-list [data-wa-template-idx]");
+  const items = [];
+  cards.forEach(card => {
+    const item = {};
+    card.querySelectorAll(".wa-tpl-field").forEach(el => {
+      item[el.getAttribute("data-wa-tpl-field")] = el.value;
+    });
+    items.push(item);
+  });
+  return items;
+}
+
+async function saveWhatsappTemplates() {
+  const items = collectWhatsappTemplatesFromDom();
+  const updated = { items };
+  currentContent.whatsapp_templates = updated;
+
+  const { error } = await supabaseClient.from("page_content").upsert({ id: "whatsapp_templates", content: updated, updated_at: new Date().toISOString() });
+  const msg = document.getElementById("whatsapp-templates-save-msg");
+  if (error) {
+    alert("保存失败：" + error.message);
+    return;
+  }
+  if (msg) {
+    msg.classList.add("show");
+    setTimeout(() => msg.classList.remove("show"), 2500);
+  }
+}
+
+// ============================================================
+// 后台三个 Tab（内容排版 / 报名数据 / 消息模板）之间的切换
 // ============================================================
 function initTabs() {
   document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -1410,6 +1576,7 @@ function showEditor(email) {
   initTabs();
   loadMergedContent().then(async () => {
     renderTemplates();
+    renderWhatsappTemplates();
     renderUtmLinks();
     // 场次分界点清单要先读进来、算好预设选哪个 Tab（最新一场），报名名单/Overview 才会照场次显示。
     leadSessionsList = (currentContent.lead_sessions && currentContent.lead_sessions.items) || [];
@@ -1469,6 +1636,18 @@ async function init() {
 
   const saveTplBtn = document.getElementById("save-templates-btn");
   if (saveTplBtn) saveTplBtn.addEventListener("click", saveTemplates);
+
+  const addWaTplBtn = document.getElementById("add-whatsapp-template-btn");
+  if (addWaTplBtn) {
+    addWaTplBtn.addEventListener("click", () => {
+      if (!currentContent.whatsapp_templates) currentContent.whatsapp_templates = { items: [] };
+      currentContent.whatsapp_templates.items.push({ label: "新模板", body: "" });
+      renderWhatsappTemplates();
+    });
+  }
+
+  const saveWaTplBtn = document.getElementById("save-whatsapp-templates-btn");
+  if (saveWaTplBtn) saveWaTplBtn.addEventListener("click", saveWhatsappTemplates);
 
   // 场次分界设定：「+ 加一个分界点」「移除」直接操作画面元素，跟 Zoom 场次那套是同一个做法。
   const addLeadSessionBtn = document.getElementById("add-lead-session-btn");

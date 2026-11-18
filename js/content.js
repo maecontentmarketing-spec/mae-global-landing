@@ -213,5 +213,14 @@ const DEFAULT_CONTENT = {
   // 显示全部资料、不分 Tab。
   lead_sessions: {
     items: []
+  },
+  // WhatsApp 模板：报名名单那边点「WhatsApp」按钮时可以挑一个模板，号码 + 内容会自动带进
+  // 一键开好的 WhatsApp 聊天窗口（还是要自己按送出，不会自动发送）。跟 email_templates 是
+  // 同一套存法，但没有「标题」栏位（WhatsApp 不需要），{{name}}/{{agent_name}} 用法一样。
+  whatsapp_templates: {
+    items: [
+      { label: "报名后感谢", body: "{{name}} 你好，谢谢你报名参加 MAE 事业分享会！我们已经收到你的资料，活动前会再提醒你一次 🙌" },
+      { label: "Zoom 前一天提醒", body: "{{name}} 你好，提醒你，我们的线上事业分享会明天就要开始了，记得先把 Zoom 安装好，准时上线哦！期待明天见到你 😊" }
+    ]
   }
 };

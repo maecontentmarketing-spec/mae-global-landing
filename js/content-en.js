@@ -173,6 +173,19 @@ const UI_STRINGS_EN = {
   form_option_1: "Seriously considering starting a business / joining",
   form_option_2: "Looking to grow a side income",
   form_option_3: "Just here to learn more, haven't decided yet",
+  // 2026-11 新增：报名管道单选 + 条件式推荐人栏 + 场次複选，三组都是静态文字（不走 Supabase
+  // 内容系统），所以只要这里跟 index.html 的 data-i18n 对上就会自动套用，不用改 site.js 的
+  // buildDisplayContent()（那个只负责 Supabase 内容覆盖，这组是 applyStaticI18n() 管的）。
+  form_label_channel: "How did you hear about this event?",
+  form_channel_website: "MAE Official Website / Social Media",
+  form_channel_founder: "Founder's Sharing",
+  form_channel_agent: "Referred by an MAE Distributor",
+  form_label_referrer_name: "Referrer's Name or Member ID",
+  form_label_sessions: "Which session(s) will you attend? (you may select more than one)",
+  form_session_zh: "🔸Mandarin Session｜25 Nov (Wed) 8:00 PM",
+  form_session_en: "🔸English Session｜26 Nov (Thu) 8:00 PM",
+  form_msg_sessions_required: "Please select at least one session",
+  form_option_phone_other: "Other",
   form_msg_ok: "Thanks for registering! We've got your details and will be in touch before the event.",
   form_msg_dup: "Looks like this email's already registered — we've got your info and will reach out soon!",
   form_msg_err: "Something went wrong — please try again shortly, or reach us directly on WhatsApp.",

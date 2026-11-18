@@ -781,17 +781,45 @@ async function loadContent() {
   }
 }
 
+// 2026-11 新增：「您是透过以下哪个管道认识这次活动的」选「MAE 经销商推荐」才会多跳出
+// 「推荐人姓名」栏位，这里一併管理那个栏位的显示/必填状态（隐藏的栏位不能设 required，
+// 不然浏览器原生验证会在看不到的栏位上卡住，表单永远送不出去）。
+function initReferralChannelToggle() {
+  const select = document.getElementById("referral-channel-select");
+  const field = document.getElementById("referrer-name-field");
+  const input = document.getElementById("referrer-name-input");
+  if (!select || !field || !input) return;
+  const sync = () => {
+    const isAgent = select.value === "agent";
+    field.hidden = !isAgent;
+    input.required = isAgent;
+    if (!isAgent) input.value = "";
+  };
+  select.addEventListener("change", sync);
+  sync();
+}
+
 function initForm() {
   const form = document.getElementById("register-form");
   const okMsg = document.getElementById("form-msg-ok");
   const dupMsg = document.getElementById("form-msg-dup");
   const errMsg = document.getElementById("form-msg-err");
+  const sessionsHint = document.getElementById("sessions-required-hint");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     okMsg.classList.remove("show");
     dupMsg.classList.remove("show");
     errMsg.classList.remove("show");
+    if (sessionsHint) sessionsHint.hidden = true;
+
+    // 场次至少要勾一场——HTML 原生 required 没办法表达「这组 checkbox 里至少勾一个」，
+    // 所以这里手动检查，没勾就显示提示文字、不送出。
+    const checkedSessions = Array.from(form.querySelectorAll('input[name="sessions"]:checked')).map(cb => cb.value);
+    if (!checkedSessions.length) {
+      if (sessionsHint) sessionsHint.hidden = false;
+      return;
+    }
 
     const btn = form.querySelector("button[type=submit]");
     const original = btn.textContent;
@@ -803,13 +831,23 @@ function initForm() {
       name: form.name.value.trim(),
       email: form.email.value.trim().toLowerCase(),
       phone: form.phone.value.trim(),
+      // 2026-11 新增：国码跟号码分开存——phone 栏位本身维持原来的样子（纯号码，不加国码，
+      // EL002 那边的 get_agent_leads_for_el002() 还在读这个栏位，格式不能说改就改），
+      // 国码另外存一个新栏位，後台显示/WhatsApp 一键按钮再自己组合。
+      phone_country_code: form.phone_country_code ? form.phone_country_code.value : "",
       city: form.city.value.trim(),
       intent: form.intent ? form.intent.value.trim() : "",
       // Amy 要求拿掉「想了解的内容 / 留言」这个栏位，表单上已经没有这个 input 了，
       // 所以这里也不再读取／送出 message，避免 form.message 是 undefined 会报错。
       agent_code: AGENT_CODE,
       utm_source: UTM_SOURCE,
-      utm_medium: UTM_MEDIUM
+      utm_medium: UTM_MEDIUM,
+      // 2026-11 新增：报名管道（固定代码 website/founder/agent，不受语言影响）+ 经销商推荐
+      // 才会有值的推荐人姓名 + 场次複选（阵列，对应 Supabase 的 text[] 栏位）。
+      referral_channel: form.referral_channel ? form.referral_channel.value.trim() : "",
+      referrer_name: (form.referral_channel && form.referral_channel.value === "agent" && form.referrer_name)
+        ? form.referrer_name.value.trim() : null,
+      sessions: checkedSessions
     };
 
     try {
@@ -819,12 +857,14 @@ function initForm() {
         if (error.code === "23505") {
           dupMsg.classList.add("show");
           form.reset();
+          initReferralChannelToggle_reset();
         } else {
           throw error;
         }
       } else {
         okMsg.classList.add("show");
         form.reset();
+        initReferralChannelToggle_reset();
       }
     } catch (err) {
       console.error(err);
@@ -836,7 +876,19 @@ function initForm() {
   });
 }
 
+// form.reset() 会把 select 的值清空，但不会自动触发 change 事件，所以「推荐人姓名」栏位
+// 送出成功后要手动重新隐藏一次，不然下一个人填表会看到上一个人留下的「展开」状态。
+function initReferralChannelToggle_reset() {
+  const select = document.getElementById("referral-channel-select");
+  const field = document.getElementById("referrer-name-field");
+  const input = document.getElementById("referrer-name-input");
+  if (!select || !field || !input) return;
+  field.hidden = true;
+  input.required = false;
+}
+
 initLangSwitch();
 loadContent();
 initForm();
+initReferralChannelToggle();
 renderAgentInviteCard();
