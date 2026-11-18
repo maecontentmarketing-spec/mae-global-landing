@@ -353,6 +353,22 @@
   .form-field textarea{min-height:100px;resize:vertical;}
   .form-field select{appearance:auto;}
 
+  /* 2026-11 新增：报名表单「场次複选」checkbox 清单（公开页面用，跟後台 .checkbox-field
+     是分开的两组 class，样式故意写成接近的，视觉上才会一致）。 */
+  /* 2026-11 新增：电话栏位前面的国码下拉（跟电话号码输入框同一排）。 */
+  .phone-row{display:flex;gap:8px;}
+  .phone-row select{width:auto;flex:0 0 96px;}
+  .phone-row input{width:auto;flex:1;min-width:0;}
+
+  .checkbox-group{display:flex;flex-direction:column;gap:10px;}
+  .checkbox-field-row{
+    display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--ink);
+    cursor:pointer;border:1px solid var(--card-border);border-radius:12px;
+    padding:12px 14px;background:var(--cream);
+  }
+  .checkbox-field-row input[type="checkbox"]{width:17px;height:17px;flex-shrink:0;}
+  #sessions-required-hint{color:#a3312f;margin:8px 0 0;}
+
   /* ---------- Closing ---------- */
   .closing{text-align:center;padding:48px 0;}
   .closing p{font-size:19px;font-weight:700;margin:0 0 12px;}
